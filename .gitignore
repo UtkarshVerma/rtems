@@ -3,6 +3,7 @@ autom4te.cache
 /build
 config.h.in
 configure
+compile_commands.json
 doc
 /*.ini
 .lock*
@@ -12,3 +13,4 @@ Makefile.in
 /testsuites/build/build
 /testsuites/build/wscript
 .waf*
+.cache/

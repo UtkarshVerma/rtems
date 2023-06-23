@@ -43,14 +43,10 @@
  * @{
  */
 
-#include <bspopts.h>
-
 #ifndef ASM
 
 #include <bsp/default-initial-extension.h>
 #include <bsp/start.h>
-
-#include <rtems.h>
 
 /*Raspberry pi MMU initialization */
 BSP_START_TEXT_SECTION void raspberrypi_4_setup_mmu_and_cache(void);
@@ -60,9 +56,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define BSP_ARM_GIC_CPUIF_BASE 0xFF842000
-#define BSP_ARM_GIC_DIST_BASE 0xFF841000
+#define BSP_ARM_GIC_DIST_BASE  0xFF841000
 
-#define BSP_RPI4_PL011_BASE 0xFE201000
+#define BSP_RPI4_PL011_BASE   0xFE201000
 #define BSP_RPI4_PL011_LENGTH 0x200
 
 #ifdef __cplusplus

@@ -10,6 +10,7 @@
 
 /*
  * Copyright (C) 2022 Mohd Noor Aman
+ * Copyright (C) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,51 +35,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <bsp.h>
-#include <bsp/start.h>
 #include <bsp/aarch64-mmu.h>
 #include <bsp/raspberrypi.h>
-#include <libcpu/mmu-vmsav8-64.h>
-
 
 BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
-raspberrypi_4_mmu_config_table[] = {
-  AARCH64_MMU_DEFAULT_SECTIONS,
-
-  { /* RPI peripheral address */
-    .begin = (unsigned)RPI_PERIPHERAL_BASE,
-    .end = (unsigned)RPI_PERIPHERAL_BASE + (unsigned)RPI_PERIPHERAL_SIZE,
-    .flags = AARCH64_MMU_DEVICE
-  },
-
-  { /* RPI ARM local registers */
-    .begin = (unsigned)BCM2711_LOCAL_REGS_BASE,
-    .end = (unsigned)BCM2711_LOCAL_REGS_BASE + (unsigned)BCM2711_LOCAL_REGS_SIZE,
-    .flags = AARCH64_MMU_DEVICE
-  },
-
-  { /* RPI GIC Interface address */
-    .begin = 0xFF800000U,
-    .end = 0xFFA00000U,
-    .flags = AARCH64_MMU_DEVICE
-  }
-
+    raspberrypi_4_mmu_config_table[] = {
+        AARCH64_MMU_DEFAULT_SECTIONS,
+        {
+            /* RPI peripheral address */
+            .begin = (unsigned)RPI_PERIPHERAL_BASE,
+            .end =
+                (unsigned)RPI_PERIPHERAL_BASE + (unsigned)RPI_PERIPHERAL_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+        {
+            /* RPI GIC Interface address */
+            .begin = 0xFF800000U,
+            .end   = 0xFFA00000U,
+            .flags = AARCH64_MMU_DEVICE,
+        },
 };
+
 /*
  * Make weak and let the user override.
  */
-BSP_START_TEXT_SECTION void
-raspberrypi_4_setup_mmu_and_cache( void ) __attribute__ ((weak));
+BSP_START_TEXT_SECTION void raspberrypi_4_setup_mmu_and_cache(void)
+    __attribute__((weak));
 
-BSP_START_TEXT_SECTION void
-raspberrypi_4_setup_mmu_and_cache( void )
-{
-  aarch64_mmu_setup();
+BSP_START_TEXT_SECTION void raspberrypi_4_setup_mmu_and_cache(void) {
+    aarch64_mmu_setup();
 
-  aarch64_mmu_setup_translation_table(
-    &raspberrypi_4_mmu_config_table[ 0 ],
-    RTEMS_ARRAY_SIZE( raspberrypi_4_mmu_config_table )
-  );
+    aarch64_mmu_setup_translation_table(
+        &raspberrypi_4_mmu_config_table[0],
+        RTEMS_ARRAY_SIZE(raspberrypi_4_mmu_config_table));
 
-  aarch64_mmu_enable();
+    aarch64_mmu_enable();
 }
