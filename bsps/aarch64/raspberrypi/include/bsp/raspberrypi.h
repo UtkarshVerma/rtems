@@ -1,18 +1,6 @@
-/*
- *  Copyright (c) 2022 Mohd Noor Aman
- *  Copyright (c) 2023 Utkarsh Verma
- *
- *  The license and distribution terms for this file may be
- *  found in the file LICENSE in this distribution or at
- *
- *  http://www.rtems.org/license/LICENSE
- *
- */
+#pragma once
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_RASPBERRYPI_4_H
-#define LIBBSP_AARCH64_RASPBERRYPI_RASPBERRYPI_4_H
+#include "raspberrypi/gic.h"
 
-#define RPI_PERIPHERAL_BASE 0xFE000000
-#define RPI_PERIPHERAL_SIZE 0x01800000
-
-#endif /* LIBBSP_ARM_RASPBERRYPI_RASPBERRYPI_H */
+#define RPI_GIC_CPUIF_BASE GIC_CPUIF_BASE
+#define RPI_GIC_DIST_BASE  GIC_DIST_BASE
