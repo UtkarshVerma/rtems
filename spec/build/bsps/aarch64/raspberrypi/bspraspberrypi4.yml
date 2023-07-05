@@ -4,7 +4,8 @@ bsp: raspberrypi4b
 build-type: bsp
 cflags: []
 copyrights:
-  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (c) 2022 Mohd Noor Aman
+  - Copyright (c) 2023 Utkarsh Verma
 cppflags: []
 enabled-by: true
 family: raspberrypi
@@ -23,6 +24,7 @@ install:
       - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/mem.h
       - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/mmu.h
       - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/gic.h
+      - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/gpio.h
 links:
   - role: build-dependency
     uid: ../grp
@@ -52,6 +54,7 @@ links:
     uid: ../../objirq
 source:
   - bsps/aarch64/raspberrypi/console/console.c
+  - bsps/aarch64/raspberrypi/gpio/gpio.c
   - bsps/aarch64/raspberrypi/start/bspstart.c
   - bsps/aarch64/raspberrypi/start/bspstarthooks.c
   - bsps/aarch64/raspberrypi/start/bspstartmmu.c

@@ -1,6 +1,7 @@
 #include <bsp/aarch64-mmu.h>
 
 #include "bsp/raspberrypi/gic.h"
+#include "bsp/raspberrypi/gpio.h"
 #include "bsp/raspberrypi/pl011.h"
 
 BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
@@ -9,6 +10,11 @@ BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
         {
             .begin = PL011_UART0_BASE,
             .end   = PL011_UART0_BASE + PL011_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+        {
+            .begin = GPIO_BASE,
+            .end   = GPIO_BASE + GPIO_SIZE,
             .flags = AARCH64_MMU_DEVICE,
         },
         {

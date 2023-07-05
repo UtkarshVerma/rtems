@@ -4,7 +4,7 @@
 
 #include "mmu.h"
 
-#define GPIO_BASE (MMU_PERIPHERAL_BASE + 0x200000)
+#define GPIO_BASE (MMU_PERIPHERAL_BASE + 0x2200000)
 #define GPIO_SIZE 0xf4
 
 typedef enum {
