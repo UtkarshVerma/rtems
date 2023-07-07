@@ -19,12 +19,7 @@ install:
     source:
       - bsps/aarch64/raspberrypi/include/bsp/irq.h
       - bsps/aarch64/raspberrypi/include/bsp/raspberrypi.h
-  - destination: ${BSP_INCLUDEDIR}/bsp/raspberrypi
-    source:
-      - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/mem.h
-      - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/mmu.h
-      - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/gic.h
-      - bsps/aarch64/raspberrypi/include/bsp/raspberrypi/gpio.h
+      - bsps/aarch64/raspberrypi/include/bsp/soc.h
 links:
   - role: build-dependency
     uid: ../grp
@@ -54,6 +49,8 @@ links:
     uid: ../../objirq
 source:
   - bsps/aarch64/raspberrypi/console/console.c
+  - bsps/aarch64/raspberrypi/dev/serial/mini-uart.c
+  - bsps/aarch64/raspberrypi/dev/serial/pl011.c
   - bsps/aarch64/raspberrypi/gpio/gpio.c
   - bsps/aarch64/raspberrypi/start/bspstart.c
   - bsps/aarch64/raspberrypi/start/bspstarthooks.c
@@ -64,7 +61,6 @@ source:
   - bsps/shared/dev/clock/arm-generic-timer.c
   - bsps/shared/dev/irq/arm-gicv2.c
   - bsps/shared/dev/irq/arm-gicv2-get-attributes.c
-  - bsps/shared/dev/serial/console-termios-init.c
   - bsps/shared/dev/serial/console-termios.c
   - bsps/shared/dev/serial/arm-pl011.c
   - bsps/shared/dev/getentropy/getentropy-cpucounter.c
