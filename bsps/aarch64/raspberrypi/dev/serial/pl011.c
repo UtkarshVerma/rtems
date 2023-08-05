@@ -1,5 +1,6 @@
 #include <dev/serial/pl011.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define MEM_REG(addr) (*(volatile uint32_t *)(addr))
 
@@ -54,8 +55,8 @@ bool pl011_probe(rtems_termios_device_context *ctx) {
     IBRD = ibrd;
     FBRD = ((bauddiv - (uint64_t)ibrd * scalar) * 64 + scalar / 2) / scalar;
 
-    LCRH = LCRH_WLEN_8BITS;
-    CR   = CR_UARTEN | CR_TXE | CR_RXE;
+    LCRH |= LCRH_WLEN_8BITS;
+    CR |= CR_UARTEN | CR_TXE | CR_RXE;
 
     return true;
 }

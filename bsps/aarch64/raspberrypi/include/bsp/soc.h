@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 
 typedef volatile uint32_t soc_reg;
 #define SOC_REG(addr) (*(soc_reg*)(addr))
