@@ -3,13 +3,14 @@
 /**
  * @file
  *
- * @ingroup RTEMSBSPsAArch64Raspberrypi4
+ * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
  * @brief BSP tm27 header
  */
 
 /*
  * Copyright (C) 2022 Mohd Noor Aman
+ * Copyright (C) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without

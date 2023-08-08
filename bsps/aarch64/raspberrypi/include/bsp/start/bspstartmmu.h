@@ -5,7 +5,7 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief BSP Startup
+ * @brief BSP MMU Startup Definitions
  */
 
 /*
@@ -35,13 +35,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <bsp/bootcard.h>
-#include <bsp/irq-generic.h>
-#include <bsp/linker-symbols.h>
-#include <stdint.h>
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_START_BSPSTARTMMU_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_START_BSPSTARTMMU_H
 
-void bsp_start(void) {
-    bsp_interrupt_initialize();
-    rtems_cache_coherent_add_area(bsp_section_nocacheheap_begin,
-                                  (uintptr_t)bsp_section_nocacheheap_size);
-}
+#include <bsp/start.h>
+
+BSP_START_TEXT_SECTION void bsp_start_mmu_setup(void);
+
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_START_BSPSTARTMMU_H */

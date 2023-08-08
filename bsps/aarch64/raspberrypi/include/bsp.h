@@ -3,13 +3,14 @@
 /**
  * @file
  *
- * @ingroup RTEMSBSPsAArch64Raspberrypi4
+ * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Core BSP definitions
+ * @brief Core BSP Definitions
  */
 
 /*
  * Copyright (C) 2022 Mohd Noor Aman
+ * Copyright (C) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,8 +35,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_4_BSP_H
-#define LIBBSP_AARCH64_RASPBERRYPI_4_BSP_H
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_H
 
 /**
  * @addtogroup RTEMSBSPsAArch64
@@ -48,29 +49,21 @@
 #ifndef ASM
 
 #include <bsp/default-initial-extension.h>
-#include <bsp/start.h>
 
-#include <rtems.h>
+#if RTEMS_BSP == raspberrypi4b
+#include "bsp/bcm2711.h"
 
-/*Raspberry pi MMU initialization */
-BSP_START_TEXT_SECTION void raspberrypi_4_setup_mmu_and_cache(void);
+#define BSP_GIC_BASE           BCM2711_GIC_BASE
+#define BSP_GIC_SIZE           BCM2711_GIC_SIZE
+#define BSP_ARM_GIC_CPUIF_BASE BCM2711_GIC_CPUIF_BASE
+#define BSP_ARM_GIC_DIST_BASE  BCM2711_GIC_DIST_BASE
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-#define BSP_ARM_GIC_CPUIF_BASE 0xFF842000
-#define BSP_ARM_GIC_DIST_BASE 0xFF841000
-
-#define BSP_RPI4_PL011_BASE 0xFE201000
-#define BSP_RPI4_PL011_LENGTH 0x200
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+#define BSP_UART0_BASE BCM2711_UART0_BASE
+#define BSP_UART0_SIZE BCM2711_UART0_SIZE
+#endif /* raspberrypi4b */
 
 #endif /* ASM */
 
 /** @} */
 
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_4_BSP_H */
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_H */
