@@ -1,0 +1,27 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}/bsp
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/irq.h
+
+source:
+  - bsps/shared/dev/irq/arm-gicv2.c
+  - bsps/shared/dev/irq/arm-gicv2-get-attributes.c
+  - bsps/shared/irq/irq-default-handler.c
+
+links:
+  - role: build-dependency
+    uid: ../../objirq

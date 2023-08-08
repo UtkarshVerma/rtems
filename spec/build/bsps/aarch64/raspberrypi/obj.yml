@@ -1,0 +1,40 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp.h
+      - bsps/aarch64/raspberrypi/include/tm27.h
+
+source:
+  - bsps/aarch64/shared/mmu/vmsav8-64.c
+  - bsps/shared/dev/getentropy/getentropy-cpucounter.c
+  - bsps/shared/dev/btimer/btimer-cpucounter.c
+
+links:
+  - role: build-dependency
+    uid: objcache
+  - role: build-dependency
+    uid: objclock
+  - role: build-dependency
+    uid: objconsole
+  - role: build-dependency
+    uid: objirq
+  - role: build-dependency
+    uid: objstart
+  - role: build-dependency
+    uid: ../../obj
+  - role: build-dependency
+    uid: ../../bspopts

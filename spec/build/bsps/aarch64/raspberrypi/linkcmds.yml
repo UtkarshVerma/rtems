@@ -1,10 +1,19 @@
 SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
 build-type: config-file
+
 content: |
   /* SPDX-License-Identifier: BSD-2-Clause */
 
   /*
    * Copyright (C) 2022 Mohd Noor Aman
+   * Copyright (C) 2023 Utkarsh Verma
    *
    * Redistribution and use in source and binary forms, with or without
    * modification, are permitted provided that the following conditions
@@ -29,8 +38,8 @@ content: |
    */
 
   MEMORY {
-  RAM_MMU  : ORIGIN = 0x0, LENGTH = (0x1000 * ${AARCH64_MMU_TRANSLATION_TABLE_PAGES})
-  RAM      : ORIGIN = 0x80000, LENGTH = 1024M
+    RAM_MMU  : ORIGIN = 0x0, LENGTH = (CONSTANT(COMMONPAGESIZE) * ${AARCH64_MMU_TRANSLATION_TABLE_PAGES})
+    RAM      : ORIGIN = 0x80000, LENGTH = 1024M
   }
 
   REGION_ALIAS ("REGION_START",          RAM);
@@ -51,11 +60,11 @@ content: |
   REGION_ALIAS ("REGION_NOCACHE",        RAM);
   REGION_ALIAS ("REGION_NOCACHE_LOAD",   RAM);
 
-  bsp_stack_abt_size = DEFINED (bsp_stack_abt_size) ? bsp_stack_abt_size : 1024;
+  bsp_stack_abt_size = DEFINED (bsp_stack_abt_size) ? bsp_stack_abt_size : 1K;
 
   bsp_section_rwbarrier_align = DEFINED (bsp_section_rwbarrier_align) ? bsp_section_rwbarrier_align : 1M;
 
-  bsp_stack_exception_size = DEFINED (bsp_stack_exception_size) ? bsp_stack_exception_size : 1024;
+  bsp_stack_exception_size = DEFINED (bsp_stack_exception_size) ? bsp_stack_exception_size : 1K;
 
   bsp_section_rwbarrier_align = DEFINED (bsp_section_rwbarrier_align) ? bsp_section_rwbarrier_align : 1M;
 
@@ -67,10 +76,10 @@ content: |
   OUTPUT_ARCH (aarch64)
 
   INCLUDE linkcmds.base
-copyrights:
-- Copyright (C) 2022 Mohd Noor Aman
-enabled-by: true
+
 install-path: ${BSP_LIBDIR}
-links: []
 target: linkcmds
-type: build
+
+links:
+  - role: build-dependency
+    uid: ../optmmupages

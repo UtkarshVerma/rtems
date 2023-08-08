@@ -1,0 +1,24 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+install: []
+
+source:
+  - bsps/aarch64/shared/clock/arm-generic-timer-aarch64.c
+  - bsps/shared/dev/clock/arm-generic-timer.c
+
+links:
+  - role: build-dependency
+    uid: ../optgtusevirt
+  - role: build-dependency
+    uid: ../optgtuseps

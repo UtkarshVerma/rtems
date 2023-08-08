@@ -1,0 +1,23 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2022 Mohd Noor Aman
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+install: []
+
+source:
+  - bsps/aarch64/shared/cache/cache.c
+
+links:
+  - role: build-dependency
+    uid: ../../optcachedata
+  - role: build-dependency
+    uid: ../../optcacheinst
