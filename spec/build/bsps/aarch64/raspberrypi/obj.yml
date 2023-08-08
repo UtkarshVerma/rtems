@@ -31,6 +31,8 @@ links:
   - role: build-dependency
     uid: objconsole
   - role: build-dependency
+    uid: objgpio
+  - role: build-dependency
     uid: objirq
   - role: build-dependency
     uid: objstart

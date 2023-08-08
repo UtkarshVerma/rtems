@@ -5,11 +5,10 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief This source file contains the default MMU tables and setup.
+ * @brief GPIO Driver Header
  */
 
 /*
- * Copyright (C) 2022 Mohd Noor Aman
  * Copyright (C) 2023 Utkarsh Verma
  *
  *
@@ -35,40 +34,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bsp/start/bspstartmmu.h"
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H
 
-#include <bsp/aarch64-mmu.h>
+#include <rtems/rtems/status.h>
+#include <stdint.h>
 
-#include "bsp.h"
+typedef enum {
+    GPIO_INPUT,
+    GPIO_OUTPUT,
+    GPIO_AF5,
+    GPIO_AF4,
+    GPIO_AF0,
+    GPIO_AF1,
+    GPIO_AF2,
+    GPIO_AF3,
+} gpio_function;
 
-BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
-    bsp_mmu_config_table[] = {
-        AARCH64_MMU_DEFAULT_SECTIONS,
-        {
-            /* UART0 */
-            .begin = BSP_UART0_BASE,
-            .end   = BSP_UART0_BASE + BSP_UART0_SIZE,
-            .flags = AARCH64_MMU_DEVICE,
-        },
-        {
-            /* GPIO */
-            .begin = BSP_GPIO_BASE,
-            .end   = BSP_GPIO_BASE + BSP_GPIO_SIZE,
-            .flags = AARCH64_MMU_DEVICE,
-        },
-        {
-            /* Interrupts */
-            .begin = BSP_GIC_BASE,
-            .end   = BSP_GIC_BASE + BSP_GIC_SIZE,
-            .flags = AARCH64_MMU_DEVICE,
-        },
-};
+typedef enum {
+    GPIO_PULL_NONE,
+    GPIO_PULL_UP,
+    GPIO_PULL_DOWN,
+} gpio_pull;
 
-BSP_START_TEXT_SECTION void bsp_start_mmu_setup(void) {
-    aarch64_mmu_setup();
+rtems_status_code gpio_set_function(unsigned int pin, gpio_function value);
+rtems_status_code gpio_set_pin(unsigned int pin);
+rtems_status_code gpio_clear_pin(unsigned int pin);
+rtems_status_code gpio_set_pull(unsigned int pin, gpio_pull value);
 
-    aarch64_mmu_setup_translation_table(
-        &bsp_mmu_config_table[0], RTEMS_ARRAY_SIZE(bsp_mmu_config_table));
-
-    aarch64_mmu_enable();
-}
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H */
