@@ -5,12 +5,11 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Core BSP Definitions
+ * @brief Auxilaries Device Driver
  */
 
 /*
- * Copyright (C) 2022 Mohd Noor Aman
- * Copyright (C) 2023 Utkarsh Verma
+ * Copyright (c) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,42 +34,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_H
-#define LIBBSP_AARCH64_RASPBERRYPI_BSP_H
+#include "bsp/aux.h"
 
-/**
- * @addtogroup RTEMSBSPsAArch64
- *
- * @{
- */
+#include <bsp/utility.h>
+#include <stdint.h>
 
-#include <bspopts.h>
+#include "bsp.h"
 
-#ifndef ASM
+#define REG(addr) *(volatile uint32_t*)(addr)
 
-#include <bsp/default-initial-extension.h>
+#define AUX_ENABLES           REG(BSP_AUX_BASE + 0x04)
+#define AUX_ENABLES_MINI_UART BSP_BIT32(0)
+#define AUX_ENABLES_SPI1      BSP_BIT32(1)
+#define AUX_ENABLES_SPI2      BSP_BIT32(2)
 
-#if RTEMS_BSP == raspberrypi4b
-#include "bsp/bcm2711.h"
+void aux_enable_mini_uart(void) {
+    AUX_ENABLES |= AUX_ENABLES_MINI_UART;
+}
 
-#define BSP_AUX_BASE BCM2711_AUX_BASE
-#define BSP_AUX_SIZE BCM2711_AUX_SIZE
+void aux_enable_spi1(void) {
+    AUX_ENABLES |= AUX_ENABLES_SPI1;
+}
 
-#define BSP_GPIO_BASE      BCM2711_GPIO_BASE
-#define BSP_GPIO_SIZE      BCM2711_GPIO_SIZE
-#define BSP_GPIO_PIN_COUNT BCM2711_GPIO_PIN_COUNT
+void aux_enable_spi2(void) {
+    AUX_ENABLES |= AUX_ENABLES_SPI2;
+}
 
-#define BSP_GIC_BASE           BCM2711_GIC_BASE
-#define BSP_GIC_SIZE           BCM2711_GIC_SIZE
-#define BSP_ARM_GIC_CPUIF_BASE BCM2711_GIC_CPUIF_BASE
-#define BSP_ARM_GIC_DIST_BASE  BCM2711_GIC_DIST_BASE
+void aux_disable_mini_uart(void) {
+    AUX_ENABLES &= ~AUX_ENABLES_MINI_UART;
+}
 
-#define BSP_UART0_BASE BCM2711_UART0_BASE
-#define BSP_UART0_SIZE BCM2711_UART0_SIZE
-#endif /* raspberrypi4b */
+void aux_disable_spi1(void) {
+    AUX_ENABLES &= ~AUX_ENABLES_SPI1;
+}
 
-#endif /* ASM */
-
-/** @} */
-
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_H */
+void aux_disable_spi2(void) {
+    AUX_ENABLES &= ~AUX_ENABLES_SPI2;
+}

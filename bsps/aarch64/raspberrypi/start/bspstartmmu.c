@@ -50,12 +50,21 @@ BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
             .end   = BSP_UART0_BASE + BSP_UART0_SIZE,
             .flags = AARCH64_MMU_DEVICE,
         },
+
+        {
+            /* Auxiliaries */
+            .begin = BSP_AUX_BASE,
+            .end   = BSP_AUX_BASE + BSP_AUX_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+
         {
             /* GPIO */
             .begin = BSP_GPIO_BASE,
             .end   = BSP_GPIO_BASE + BSP_GPIO_SIZE,
             .flags = AARCH64_MMU_DEVICE,
         },
+
         {
             /* Interrupts */
             .begin = BSP_GIC_BASE,
