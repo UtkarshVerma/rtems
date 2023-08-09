@@ -20,3 +20,15 @@ source:
 links:
   - role: build-dependency
     uid: objaux
+  - role: build-dependency
+    uid: objconsolepl011
+  - role: build-dependency
+    uid: objconsoleminiuart
+  - role: build-dependency
+    uid: optconsolebaud
+  - role: build-dependency
+    uid: optconsoleport
+  - role: build-dependency
+    uid: optclockpl011freq
+  - role: build-dependency
+    uid: optclocksystemfreq

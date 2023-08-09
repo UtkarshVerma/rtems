@@ -56,6 +56,22 @@
 #define BSP_AUX_BASE BCM2711_AUX_BASE
 #define BSP_AUX_SIZE BCM2711_AUX_SIZE
 
+#define BSP_PL011_UARTS(X, ...)                                          \
+    X(0, "/dev/ttyAMA0", BCM2711_UART0_BASE, BCM2711_UART0_SIZE, 14, 15, \
+      GPIO_AF0, __VA_ARGS__)                                             \
+    X(2, "/dev/ttyAMA1", BCM2711_UART2_BASE, BCM2711_UART2_SIZE, 0, 1,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(3, "/dev/ttyAMA2", BCM2711_UART3_BASE, BCM2711_UART3_SIZE, 4, 5,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(4, "/dev/ttyAMA3", BCM2711_UART4_BASE, BCM2711_UART4_SIZE, 8, 9,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(5, "/dev/ttyAMA4", BCM2711_UART5_BASE, BCM2711_UART5_SIZE, 12, 13, \
+      GPIO_AF4, __VA_ARGS__)
+
+#define BSP_MINI_UARTS(X, ...)                                         \
+    X(1, "/dev/ttyS0", BCM2711_UART1_BASE, BCM2711_UART1_SIZE, 14, 15, \
+      GPIO_AF5, __VA_ARGS__)
+
 #define BSP_GPIO_BASE      BCM2711_GPIO_BASE
 #define BSP_GPIO_SIZE      BCM2711_GPIO_SIZE
 #define BSP_GPIO_PIN_COUNT BCM2711_GPIO_PIN_COUNT
