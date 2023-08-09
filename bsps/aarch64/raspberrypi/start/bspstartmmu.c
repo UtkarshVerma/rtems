@@ -41,15 +41,21 @@
 
 #include "bsp.h"
 
+#define UART_MMU_DEVICE(port, file, base, size, ...) \
+    {                                                \
+        .begin = base,                               \
+        .end   = base + size,                        \
+        .flags = AARCH64_MMU_DEVICE,                 \
+    },
+
 BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
     bsp_mmu_config_table[] = {
         AARCH64_MMU_DEFAULT_SECTIONS,
-        {
-            /* UART0 */
-            .begin = BSP_UART0_BASE,
-            .end   = BSP_UART0_BASE + BSP_UART0_SIZE,
-            .flags = AARCH64_MMU_DEVICE,
-        },
+        /* UARTs */
+        /* clang-format off */
+        BSP_PL011_UARTS(UART_MMU_DEVICE)
+        BSP_MINI_UARTS(UART_MMU_DEVICE)
+        /* clang-format on */
 
         {
             /* Auxiliaries */
