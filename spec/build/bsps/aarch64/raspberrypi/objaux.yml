@@ -10,13 +10,13 @@ cflags: []
 cppflags: []
 cxxflags: []
 includes: []
-install: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}/bsp
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/aux.h
 
 source:
-  - bsps/aarch64/raspberrypi/console/console.c
-  - bsps/shared/dev/serial/console-termios-init.c
-  - bsps/shared/dev/serial/console-termios.c
+  - bsps/aarch64/raspberrypi/aux/aux.c
 
-links:
-  - role: build-dependency
-    uid: objaux
+links: []

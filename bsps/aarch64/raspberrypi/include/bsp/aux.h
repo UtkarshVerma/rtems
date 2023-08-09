@@ -5,12 +5,11 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Core BSP Definitions
+ * @brief Auxilaries Device Driver
  */
 
 /*
- * Copyright (C) 2022 Mohd Noor Aman
- * Copyright (C) 2023 Utkarsh Verma
+ * Copyright (c) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,42 +34,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_H
-#define LIBBSP_AARCH64_RASPBERRYPI_BSP_H
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_AUX_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_AUX_H
 
-/**
- * @addtogroup RTEMSBSPsAArch64
- *
- * @{
- */
+void aux_enable_mini_uart(void);
+void aux_enable_spi1(void);
+void aux_enable_spi2(void);
 
-#include <bspopts.h>
+void aux_disable_mini_uart(void);
+void aux_disable_spi1(void);
+void aux_disable_spi2(void);
 
-#ifndef ASM
-
-#include <bsp/default-initial-extension.h>
-
-#if RTEMS_BSP == raspberrypi4b
-#include "bsp/bcm2711.h"
-
-#define BSP_AUX_BASE BCM2711_AUX_BASE
-#define BSP_AUX_SIZE BCM2711_AUX_SIZE
-
-#define BSP_GPIO_BASE      BCM2711_GPIO_BASE
-#define BSP_GPIO_SIZE      BCM2711_GPIO_SIZE
-#define BSP_GPIO_PIN_COUNT BCM2711_GPIO_PIN_COUNT
-
-#define BSP_GIC_BASE           BCM2711_GIC_BASE
-#define BSP_GIC_SIZE           BCM2711_GIC_SIZE
-#define BSP_ARM_GIC_CPUIF_BASE BCM2711_GIC_CPUIF_BASE
-#define BSP_ARM_GIC_DIST_BASE  BCM2711_GIC_DIST_BASE
-
-#define BSP_UART0_BASE BCM2711_UART0_BASE
-#define BSP_UART0_SIZE BCM2711_UART0_SIZE
-#endif /* raspberrypi4b */
-
-#endif /* ASM */
-
-/** @} */
-
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_H */
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_AUX_H */
