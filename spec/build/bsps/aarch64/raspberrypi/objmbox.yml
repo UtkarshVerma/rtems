@@ -1,0 +1,30 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}/bsp
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/mbox.h
+  - destination: ${BSP_INCLUDEDIR}/bsp/mbox/property
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/mbox/property/message.h
+      - bsps/aarch64/raspberrypi/include/bsp/mbox/property/tags.h
+  - destination: ${BSP_INCLUDEDIR}/bsp/mbox/property/tags
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/mbox/property/tags/hardware.h
+      - bsps/aarch64/raspberrypi/include/bsp/mbox/property/tags/videocore.h
+
+source:
+  - bsps/aarch64/raspberrypi/mbox/mbox.c
+
+links: []

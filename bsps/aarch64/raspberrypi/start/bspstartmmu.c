@@ -72,6 +72,13 @@ BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
         },
 
         {
+            /* Mailbox */
+            .begin = BSP_MBOX_BASE,
+            .end   = BSP_MBOX_BASE + BSP_MBOX_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+
+        {
             /* Interrupts */
             .begin = BSP_GIC_BASE,
             .end   = BSP_GIC_BASE + BSP_GIC_SIZE,
