@@ -62,7 +62,7 @@ BSP_START_TEXT_SECTION void bsp_start_mmu_setup(void) {
     aarch64_mmu_setup();
 
     aarch64_mmu_setup_translation_table(
-        &bsp_mmu_config_table[0], RTEMS_ARRAY_SIZE(bsp_mmu_config_table));
+        bsp_mmu_config_table, RTEMS_ARRAY_SIZE(bsp_mmu_config_table));
 
     aarch64_mmu_enable();
 }

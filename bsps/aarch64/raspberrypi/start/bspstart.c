@@ -38,6 +38,7 @@
 #include <bsp/bootcard.h>
 #include <bsp/irq-generic.h>
 #include <bsp/linker-symbols.h>
+#include <rtems/rtems/cache.h>
 #include <stdint.h>
 
 void bsp_start(void) {
