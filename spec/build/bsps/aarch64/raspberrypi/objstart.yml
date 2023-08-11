@@ -30,6 +30,8 @@ source:
 
 links:
   - role: build-dependency
+    uid: objcache
+  - role: build-dependency
     uid: ../start
   - role: build-dependency
     uid: ../optmmupages

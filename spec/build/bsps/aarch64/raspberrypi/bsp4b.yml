@@ -13,11 +13,16 @@ family: raspberrypi
 cflags: []
 cppflags: []
 includes: []
-install: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}/bsp
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/bcm2711.h
+
 source: []
 
 links:
   - role: build-dependency
-    uid: grp4b
+    uid: grp
   - role: build-dependency
     uid: linkcmds
