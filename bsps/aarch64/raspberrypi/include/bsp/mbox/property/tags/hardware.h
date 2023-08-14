@@ -40,18 +40,19 @@
 #include <stdint.h>
 
 #define HARDWARE_GET_BOARD_MODEL_TAG \
-    hardware_get_board_model_tag_buffer, 0x00010001
+    { 0x00010001, sizeof(hardware_get_board_model_tag_buffer) }
 #define HARDWARE_GET_BOARD_REVISION_TAG \
-    hardware_get_board_revision_tag_buffer, 0x00010002
+    { 0x00010002, sizeof(hardware_get_board_revision_tag_buffer) }
 #define HARDWARE_GET_BOARD_MAC_ADDRESS_TAG \
-    hardware_get_board_mac_address_tag_buffer, 0x00010003
+    { 0x00010003, sizeof(hardware_get_board_mac_address_tag_buffer) }
 #define HARDWARE_GET_BOARD_SERIAL_TAG \
-    hardware_get_board_serial_tag_buffer, 0x00010004
+    { 0x00010004, sizeof(hardware_get_board_serial_tag_buffer) }
 #define HARDWARE_GET_ARM_MEMORY_TAG \
-    hardware_get_arm_memory_tag_buffer, 0x00010005
+    { 0x00010005, sizeof(hardware_get_arm_memory_tag_buffer) }
 #define HARDWARE_GET_VC_MEMORY_TAG \
-    hardware_get_vc_memory_tag_buffer, 0x00010006
-#define HARDWARE_GET_CLOCKS_TAG hardware_get_clocks_tag_buffer, 0x00010007
+    { 0x00010006, sizeof(hardware_get_vc_memory_tag_buffer) }
+#define HARDWARE_GET_CLOCKS_TAG \
+    { 0x00010007, sizeof(hardware_get_clocks_tag_buffer) }
 
 typedef union {
     struct {

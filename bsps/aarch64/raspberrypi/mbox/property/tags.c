@@ -5,7 +5,7 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Property Message
+ * @brief Property Tags
  */
 
 /*
@@ -34,29 +34,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H
-#define LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H
+#include "bsp/mbox/property/tags.h"
 
+#include <bsp/utility.h>
 #include <stddef.h>
-#include <stdint.h>
 
-#include "tags.h"
+#define TAG_STATUS_RESPONSE_MASK      BSP_BIT32(31)
+#define TAG_STATUS_RESPONSE_SIZE_MASK BSP_FLD32(0, 30)
 
-typedef struct {
-    uint32_t size;
-    volatile uint32_t status;
-} mbox_property_message_header;
+int mbox_property_tag_init(mbox_property_tag* tag, size_t size,
+                           mbox_property_tag_metadata* metadata) {
+    if (sizeof(*tag) > size) return 1;
 
-typedef struct {
-    mbox_property_message_header header;
-    mbox_property_tag buffer[];
-} mbox_property_message;
+    tag->header.id          = metadata->id;
+    tag->header.buffer_size = metadata->size;
+    tag->header.status_code &= ~TAG_STATUS_RESPONSE_MASK;
 
-mbox_property_message* mbox_property_message_new(size_t size);
-void mbox_property_message_destroy(mbox_property_message* message);
-
-int mbox_property_message_init(mbox_property_message* message, size_t size,
-                               mbox_property_tag_metadata* tag_metadata,
-                               unsigned int tag_count);
-
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H */
+    return 0;
+}

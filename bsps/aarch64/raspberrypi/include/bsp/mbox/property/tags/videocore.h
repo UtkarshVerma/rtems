@@ -40,7 +40,7 @@
 #include <stdint.h>
 
 #define VIDEOCORE_GET_FIRMWARE_REVISION_TAG \
-    videocore_get_firmware_revision_tag_buffer, 0x00000001
+    { 0x00000001, sizeof(videocore_get_firmware_revision_tag_buffer) }
 
 typedef union {
     struct {

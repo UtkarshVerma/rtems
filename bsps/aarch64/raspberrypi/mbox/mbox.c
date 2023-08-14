@@ -61,16 +61,12 @@ unsigned int mbox_read(mbox_channel channel) {
 
         // Verify that the received data is for the requested channel
         uint32_t message = MBOX_READ;
-        if ((message & MBOX_MESSAGE_CHANNEL_MASK) == channel) {
-            rtems_cache_enable_data();
+        if ((message & MBOX_MESSAGE_CHANNEL_MASK) == channel)
             return message & MBOX_MESSAGE_DATA_MASK;
-        }
     }
 }
 
 void mbox_write(mbox_channel channel, void* buffer) {
-    rtems_cache_disable_data();
-
     // Wait until the mailbox is empty
     while (MBOX_STATUS & MBOX_STATUS_FULL)
         ;

@@ -26,5 +26,7 @@ install:
 
 source:
   - bsps/aarch64/raspberrypi/mbox/mbox.c
+  - bsps/aarch64/raspberrypi/mbox/property/message.c
+  - bsps/aarch64/raspberrypi/mbox/property/tags.c
 
 links: []
