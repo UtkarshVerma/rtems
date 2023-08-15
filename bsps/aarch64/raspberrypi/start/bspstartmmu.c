@@ -40,6 +40,7 @@
 #include <bsp/aarch64-mmu.h>
 
 #include "bsp.h"
+#include "bsp/mbox/property/message.h"
 
 #define UART_MMU_DEVICE(port, file, base, size, ...) \
     {                                                \
@@ -76,6 +77,20 @@ BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
             .begin = BSP_MBOX_BASE,
             .end   = BSP_MBOX_BASE + BSP_MBOX_SIZE,
             .flags = AARCH64_MMU_DEVICE,
+        },
+        {
+            /*
+             * Mailbox buffer needs to be uncached as it is accessed by the
+             * GPU.
+             */
+            .begin = (uintptr_t)mbox_property_message_buffer,
+            .end   = (uintptr_t)mbox_property_message_buffer +
+                   sizeof(mbox_property_message_buffer),
+
+            /* TODO:
+             * Switch to AARCH64_MMU_DATA_RW once Kinsey's patch is merged
+             */
+            .flags = (AARCH64_MMU_FLAGS_BASE | MMU_DESC_MAIR_ATTR(2)),
         },
 
         {

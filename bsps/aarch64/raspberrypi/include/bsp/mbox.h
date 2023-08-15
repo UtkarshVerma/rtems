@@ -37,6 +37,8 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_H
 #define LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_H
 
+#include <stdint.h>
+
 typedef enum {
     /* POWER_MANAGEMENT = 0, */
     /* FRAMEBUFFER, */
@@ -49,7 +51,7 @@ typedef enum {
     /* PROPERTY_TAGS_VC_TO_ARM, */
 } mbox_channel;
 
-unsigned int mbox_read(mbox_channel channel);
+uint32_t mbox_read(mbox_channel channel);
 void mbox_write(mbox_channel channel, void* buffer);
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_H */

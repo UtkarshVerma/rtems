@@ -29,4 +29,6 @@ source:
   - bsps/aarch64/raspberrypi/mbox/property/message.c
   - bsps/aarch64/raspberrypi/mbox/property/tags.c
 
-links: []
+links:
+  - role: build-dependency
+    uid: optmboxpropmsgbufsize

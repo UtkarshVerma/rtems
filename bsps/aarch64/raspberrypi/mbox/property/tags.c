@@ -38,12 +38,26 @@
 
 #include <bsp/utility.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define TAG_STATUS_RESPONSE_MASK      BSP_BIT32(31)
 #define TAG_STATUS_RESPONSE_SIZE_MASK BSP_FLD32(0, 30)
 
-int mbox_property_tag_init(mbox_property_tag* tag, size_t size,
-                           mbox_property_tag_metadata* metadata) {
+mbox_property_tag *mbox_property_tag_next(mbox_property_tag *current) {
+    uintptr_t next_tag_addr = (uintptr_t)(current) + sizeof(current->header) +
+                              current->header.buffer_size;
+
+    const unsigned int alignment = sizeof(uint32_t);
+
+    /* Tags are 32-bit aligned */
+    if (next_tag_addr % alignment > 0)
+        next_tag_addr += alignment - next_tag_addr % alignment;
+
+    return (mbox_property_tag *)next_tag_addr;
+}
+
+int mbox_property_tag_init(mbox_property_tag *tag, size_t size,
+                           mbox_property_tag_metadata *metadata) {
     if (sizeof(*tag) > size) return 1;
 
     tag->header.id          = metadata->id;

@@ -1,0 +1,23 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: option
+name: BSP_MBOX_PROPERTY_MESSAGE_BUFFER_SIZE
+description: Size of the mailbox property message buffer in WORDs.
+
+actions:
+  - get-integer: null
+  - define: null
+
+default:
+  - enabled-by:
+      - aarch64/raspberrypi4b
+    value: 200
+
+format: '{}'
+
+links: []

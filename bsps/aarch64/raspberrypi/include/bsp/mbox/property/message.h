@@ -37,6 +37,7 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H
 #define LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H
 
+#include <bspopts.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -52,11 +53,12 @@ typedef struct {
     mbox_property_tag buffer[];
 } mbox_property_message;
 
-mbox_property_message* mbox_property_message_new(size_t size);
-void mbox_property_message_destroy(mbox_property_message* message);
-
-int mbox_property_message_init(mbox_property_message* message, size_t size,
-                               mbox_property_tag_metadata* tag_metadata,
+int mbox_property_message_init(mbox_property_tag_metadata* tag_metadata,
                                unsigned int tag_count);
+int mbox_property_message_send(void);
+mbox_property_tag* mbox_property_message_get_tag(unsigned int index);
+
+extern uint32_t
+    mbox_property_message_buffer[BSP_MBOX_PROPERTY_MESSAGE_BUFFER_SIZE];
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_MESSAGE_H */

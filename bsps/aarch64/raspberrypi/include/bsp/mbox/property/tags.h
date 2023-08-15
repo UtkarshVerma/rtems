@@ -59,5 +59,6 @@ typedef struct {
 
 int mbox_property_tag_init(mbox_property_tag* tag, size_t size,
                            mbox_property_tag_metadata* metadata);
+mbox_property_tag* mbox_property_tag_next(mbox_property_tag* current);
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_MBOX_PROPERTY_TAGS_H */

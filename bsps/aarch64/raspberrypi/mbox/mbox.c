@@ -53,7 +53,7 @@
 #define MBOX_MESSAGE_CHANNEL_MASK BSP_MSK32(0, 3)
 #define MBOX_MESSAGE_DATA_MASK    ~MBOX_MESSAGE_CHANNEL_MASK
 
-unsigned int mbox_read(mbox_channel channel) {
+uint32_t mbox_read(mbox_channel channel) {
     while (1) {
         // Wait until there is data to be read
         while (MBOX_STATUS & MBOX_STATUS_EMPTY)

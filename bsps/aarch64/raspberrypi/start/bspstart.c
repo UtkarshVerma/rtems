@@ -41,8 +41,13 @@
 #include <rtems/rtems/cache.h>
 #include <stdint.h>
 
+#include "bsp/mbox/property/message.h"
+
 void bsp_start(void) {
     bsp_interrupt_initialize();
     rtems_cache_coherent_add_area(bsp_section_nocacheheap_begin,
                                   (uintptr_t)bsp_section_nocacheheap_size);
+
+    rtems_cache_coherent_add_area(mbox_property_message_buffer,
+                                  sizeof(mbox_property_message_buffer));
 }

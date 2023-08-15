@@ -37,11 +37,10 @@
 #include "bsp/mbox/property/message.h"
 
 #include <bsp/utility.h>
-#include <rtems/rtems/cache.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
+#include "bsp/mbox.h"
 #include "bsp/mbox/property/tags.h"
 
 #define NULL_TAG_ID 0
@@ -51,36 +50,27 @@
 #define STATUS_CODE_RESPONSE_SUCCESS RESPONSE_CODE
 #define STATUS_CODE_RESPONSE_ERROR   RESPONSE_CODE | BIT32(0)
 
-mbox_property_message *mbox_property_message_new(size_t size) {
-    /*
-     * NOTE:
-     * This has to be 16-byte aligned as the least significant nibble is
-     * discarded from the pointer and assumed to be zero while making the
-     * mailbox call.
-     */
-    void *buffer = rtems_cache_coherent_allocate(size, 16, 0);
-    return buffer;
-}
+/*
+ * NOTE:
+ * This has to be 16-byte aligned as the least significant nibble is
+ * discarded from the pointer and assumed to be zero while making the
+ * mailbox call.
+ */
+uint32_t mbox_property_message_buffer[BSP_MBOX_PROPERTY_MESSAGE_BUFFER_SIZE]
+    __attribute__((aligned(16)));
 
-void mbox_property_message_destroy(mbox_property_message *message) {
-    rtems_cache_coherent_free(message);
-}
-
-int mbox_property_message_init(mbox_property_message *message, size_t size,
-                               mbox_property_tag_metadata *tag_metadata,
+int mbox_property_message_init(mbox_property_tag_metadata *tag_metadata,
                                unsigned int tag_count) {
-    uintptr_t buffer_end   = (uintptr_t)message + size;
+    mbox_property_message *message = (void *)mbox_property_message_buffer;
+    uintptr_t buffer_end =
+        (uintptr_t)message + sizeof(mbox_property_message_buffer);
     mbox_property_tag *tag = message->buffer;
     for (unsigned int i = 0; i < tag_count; i++) {
         if (mbox_property_tag_init(tag, buffer_end - (uintptr_t)tag,
                                    &tag_metadata[i]))
             return 1;
 
-        /* Tags should be 32-bit aligned */
-        uintptr_t next_tag_addr =
-            (uintptr_t)(tag) + sizeof(tag->header) + tag_metadata[i].size;
-        next_tag_addr += sizeof(uint32_t) - next_tag_addr % sizeof(uint32_t);
-        tag = (mbox_property_tag *)next_tag_addr;
+        tag = mbox_property_tag_next(tag);
     }
 
     uint32_t *null_tag = (uint32_t *)tag;
@@ -90,4 +80,26 @@ int mbox_property_message_init(mbox_property_message *message, size_t size,
     message->header.status = STATUS_CODE_PROCESS_REQUEST;
 
     return 0;
+}
+
+int mbox_property_message_send(void) {
+    mbox_write(PROPERTY_TAGS_ARM_TO_VC, mbox_property_message_buffer);
+    uint32_t buffer_addr = mbox_read(PROPERTY_TAGS_ARM_TO_VC);
+
+    return buffer_addr != (uintptr_t)mbox_property_message_buffer;
+}
+
+mbox_property_tag *mbox_property_message_get_tag(unsigned int index) {
+    mbox_property_message *message = (void *)mbox_property_message_buffer;
+
+    mbox_property_tag *tag = (void *)message->buffer;
+    if (tag->header.id == NULL_TAG_ID) return NULL;
+
+    for (unsigned int i = 0; i < index; i++) {
+        if (tag->header.id == NULL_TAG_ID) return NULL;
+
+        tag = mbox_property_tag_next(tag);
+    }
+
+    return tag;
 }
