@@ -37,6 +37,16 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_AUX_H
 #define LIBBSP_AARCH64_RASPBERRYPI_BSP_AUX_H
 
+#include <bspopts.h>
+
+#if RTEMS_BSP == raspberrypi4b
+#include "bsp/bcm2711.h"
+
+#define BSP_AUX_BASE BCM2711_AUX_BASE
+#define BSP_AUX_SIZE BCM2711_AUX_SIZE
+
+#endif /* raspberrypi4b */
+
 void aux_enable_mini_uart(void);
 void aux_enable_spi1(void);
 void aux_enable_spi2(void);

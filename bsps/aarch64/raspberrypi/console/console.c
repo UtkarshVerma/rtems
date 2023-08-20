@@ -35,6 +35,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "bsp/console.h"
+
 #include <bsp/console-termios.h>
 #include <bsp/fatal.h>
 #include <bspopts.h>
@@ -42,7 +44,6 @@
 #include <rtems/console.h>
 #include <stdint.h>
 
-#include "bsp.h"
 #include "bsp/aux.h"
 #include "bsp/rpi-gpio.h"
 #include "dev/serial/mini-uart.h"

@@ -39,8 +39,6 @@
 #include <bsp/utility.h>
 #include <stdint.h>
 
-#include "bsp.h"
-
 #define REG(addr) *(volatile uint32_t*)(addr)
 
 #define AUX_ENABLES           REG(BSP_AUX_BASE + 0x04)

@@ -37,7 +37,6 @@
 #include <rtems/rtems/status.h>
 #include <stdint.h>
 
-#include "bsp.h"
 #include "bsp/rpi-gpio.h"
 
 #define REG(addr) *(volatile uint32_t*)(addr)

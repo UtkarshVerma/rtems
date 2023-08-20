@@ -39,7 +39,10 @@
 
 #include <bsp/aarch64-mmu.h>
 
-#include "bsp.h"
+#include "bsp/aux.h"
+#include "bsp/console.h"
+#include "bsp/irq.h"
+#include "bsp/rpi-gpio.h"
 
 #define UART_MMU_DEVICE(port, file, base, size, ...) \
     {                                                \

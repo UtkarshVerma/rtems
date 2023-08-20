@@ -5,11 +5,11 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief GPIO Driver Header
+ * @brief Console Device
  */
 
 /*
- * Copyright (C) 2023 Utkarsh Verma
+ * Copyright (c) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,42 +34,30 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H
-#define LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_H
 
 #include <bspopts.h>
-#include <rtems/rtems/status.h>
-#include <stdint.h>
 
 #if RTEMS_BSP == raspberrypi4b
 #include "bsp/bcm2711.h"
 
-#define BSP_GPIO_BASE      BCM2711_GPIO_BASE
-#define BSP_GPIO_SIZE      BCM2711_GPIO_SIZE
-#define BSP_GPIO_PIN_COUNT BCM2711_GPIO_PIN_COUNT
+#define BSP_PL011_UARTS(X, ...)                                          \
+    X(0, "/dev/ttyAMA0", BCM2711_UART0_BASE, BCM2711_UART0_SIZE, 14, 15, \
+      GPIO_AF0, __VA_ARGS__)                                             \
+    X(2, "/dev/ttyAMA1", BCM2711_UART2_BASE, BCM2711_UART2_SIZE, 0, 1,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(3, "/dev/ttyAMA2", BCM2711_UART3_BASE, BCM2711_UART3_SIZE, 4, 5,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(4, "/dev/ttyAMA3", BCM2711_UART4_BASE, BCM2711_UART4_SIZE, 8, 9,   \
+      GPIO_AF4, __VA_ARGS__)                                             \
+    X(5, "/dev/ttyAMA4", BCM2711_UART5_BASE, BCM2711_UART5_SIZE, 12, 13, \
+      GPIO_AF4, __VA_ARGS__)
+
+#define BSP_MINI_UARTS(X, ...)                                         \
+    X(1, "/dev/ttyS0", BCM2711_UART1_BASE, BCM2711_UART1_SIZE, 14, 15, \
+      GPIO_AF5, __VA_ARGS__)
 
 #endif /* raspberrypi4b */
 
-typedef enum {
-    GPIO_INPUT,
-    GPIO_OUTPUT,
-    GPIO_AF5,
-    GPIO_AF4,
-    GPIO_AF0,
-    GPIO_AF1,
-    GPIO_AF2,
-    GPIO_AF3,
-} gpio_function;
-
-typedef enum {
-    GPIO_PULL_NONE,
-    GPIO_PULL_UP,
-    GPIO_PULL_DOWN,
-} gpio_pull;
-
-rtems_status_code gpio_set_function(unsigned int pin, gpio_function value);
-rtems_status_code gpio_set_pin(unsigned int pin);
-rtems_status_code gpio_clear_pin(unsigned int pin);
-rtems_status_code gpio_set_pull(unsigned int pin, gpio_pull value);
-
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_RPI_GPIO_H */
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_H */

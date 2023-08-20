@@ -10,7 +10,11 @@ cflags: []
 cppflags: []
 cxxflags: []
 includes: []
-install: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/console.h
 
 source:
   - bsps/aarch64/raspberrypi/console/console.c

@@ -22,3 +22,5 @@ links:
     uid: ../optgtusevirt
   - role: build-dependency
     uid: ../optgtuseps
+  - role: build-dependency
+    uid: objirq
