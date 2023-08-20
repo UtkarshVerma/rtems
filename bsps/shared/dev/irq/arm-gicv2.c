@@ -33,12 +33,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <dev/irq/arm-gic.h>
+#include <dev/irq/arm-gic-irq.h>
 #include <dev/irq/arm-gic-arch.h>
 
-#include <bsp/irq.h>
 #include <bsp/irq-generic.h>
-#include <bsp/start.h>
+#include <string.h>
 
 #define GIC_CPUIF ((volatile gic_cpuif *) BSP_ARM_GIC_CPUIF_BASE)
 
