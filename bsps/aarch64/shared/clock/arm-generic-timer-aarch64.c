@@ -35,6 +35,7 @@
  */
 
 #include <dev/clock/arm-generic-timer.h>
+#include <rtems/irq.h>
 #include <bsp/irq.h>
 
 uint64_t arm_gt_clock_get_compare_value(void)

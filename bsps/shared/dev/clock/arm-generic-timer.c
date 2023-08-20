@@ -28,6 +28,7 @@
 #include <bsp.h>
 #include <bsp/fatal.h>
 #include <bsp/irq.h>
+#include <rtems/irq.h>
 #include <bsp/irq-generic.h>
 #include <dev/clock/arm-generic-timer.h>
 
