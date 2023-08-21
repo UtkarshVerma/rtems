@@ -15,10 +15,12 @@ install:
   - destination: ${BSP_INCLUDEDIR}
     source:
       - bsps/aarch64/raspberrypi/include/bsp/console.h
+      - bsps/aarch64/raspberrypi/include/bsp/console/devices.h
 
 source:
   - bsps/aarch64/raspberrypi/console/console.c
-  - bsps/shared/dev/serial/console-termios-init.c
+  - bsps/aarch64/raspberrypi/console/devices.c
+  - bsps/aarch64/raspberrypi/console/devices/raspberrypi4b.c
   - bsps/shared/dev/serial/console-termios.c
 
 links:

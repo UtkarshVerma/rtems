@@ -5,10 +5,11 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Mini UART Device Driver
+ * @brief Console Devices
  */
 
 /*
+ * Copyright (C) 2022 Mohd Noor Aman
  * Copyright (C) 2023 Utkarsh Verma
  *
  *
@@ -34,21 +35,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
-#define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
+#include "bsp/console/devices.h"
 
-#include <rtems/termiosdevice.h>
-#include <stdbool.h>
-#include <stdint.h>
+rtems_status_code console_device_init_gpio(
+    const bsp_console_device_gpio_metadata* metadata) {
+    rtems_status_code status =
+        gpio_set_function(metadata->tx_pin, metadata->alt_func);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
 
-typedef struct {
-    rtems_termios_device_context context;
-    uintptr_t regs_base;
-    uint32_t clock;
-    const uint32_t initial_baud;
-} mini_uart_context;
+    status = gpio_set_function(metadata->rx_pin, metadata->alt_func);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
 
-extern const rtems_termios_device_handler mini_uart_polled_handler;
-extern const rtems_termios_device_handler mini_uart_irq_driven_handler;
+    status = gpio_set_pull(metadata->tx_pin, GPIO_PULL_NONE);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
 
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H */
+    status = gpio_set_pull(metadata->rx_pin, GPIO_PULL_NONE);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
+
+    return RTEMS_SUCCESSFUL;
+}

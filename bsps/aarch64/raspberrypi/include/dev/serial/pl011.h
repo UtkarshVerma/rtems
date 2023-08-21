@@ -37,19 +37,17 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H
 #define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H
 
-#include <rtems/termiostypes.h>
+#include <rtems/termiosdevice.h>
+#include <stdint.h>
 
 typedef struct {
     rtems_termios_device_context context;
-    uintptr_t base_reg;
+    uintptr_t regs_base;
     uint32_t clock;
     uint32_t initial_baud;
 } pl011_context;
 
-bool pl011_probe(rtems_termios_device_context *ctx);
+extern const rtems_termios_device_handler pl011_polled_handler;
+extern const rtems_termios_device_handler pl011_irq_driven_handler;
 
-void pl011_write_char_polled(rtems_termios_device_context *ctx, char ch);
-
-extern const rtems_termios_device_handler pl011_handler;
-
-#endif
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H */

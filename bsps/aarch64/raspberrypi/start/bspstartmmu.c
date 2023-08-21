@@ -38,27 +38,32 @@
 #include "bsp/start/bspstartmmu.h"
 
 #include <bsp/aarch64-mmu.h>
+#include <libcpu/mmu-vmsav8-64.h>
 
 #include "bsp/aux.h"
-#include "bsp/console.h"
+#include "bsp/bcm2711.h"
 #include "bsp/irq.h"
 #include "bsp/rpi-gpio.h"
-
-#define UART_MMU_DEVICE(port, file, base, size, ...) \
-    {                                                \
-        .begin = base,                               \
-        .end   = base + size,                        \
-        .flags = AARCH64_MMU_DEVICE,                 \
-    },
 
 BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
     bsp_mmu_config_table[] = {
         AARCH64_MMU_DEFAULT_SECTIONS,
-        /* UARTs */
-        /* clang-format off */
-        BSP_PL011_UARTS(UART_MMU_DEVICE)
-        BSP_MINI_UARTS(UART_MMU_DEVICE)
-        /* clang-format on */
+
+        /* TODO: This should follow the device config */
+        {
+            /* UART0 */
+            .begin = BCM2711_UART0_BASE,
+            .end   = BCM2711_UART0_BASE + BCM2711_UART0_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+
+        {
+            /* UART1 */
+            .begin = BCM2711_UART1_BASE,
+            .end   = BCM2711_UART1_BASE + BCM2711_UART1_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+
+        },
 
         {
             /* Auxiliaries */

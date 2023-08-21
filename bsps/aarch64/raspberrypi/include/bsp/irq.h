@@ -21,8 +21,6 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_IRQ_H
 #define LIBBSP_AARCH64_RASPBERRYPI_BSP_IRQ_H
 
-#ifndef ASM
-
 #include <bspopts.h>
 
 /**
@@ -68,5 +66,4 @@ static inline rtems_status_code bsp_interrupt_get_affinity(
 }
 #endif
 
-#endif /* ASM */
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_IRQ_H */

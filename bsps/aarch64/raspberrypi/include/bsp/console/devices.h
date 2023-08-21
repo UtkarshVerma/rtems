@@ -5,11 +5,11 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief Mini UART Device Driver
+ * @brief Console Devices
  */
 
 /*
- * Copyright (C) 2023 Utkarsh Verma
+ * Copyright (c) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,21 +34,53 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
-#define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
+#ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_DEVICES_H
+#define LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_DEVICES_H
 
-#include <rtems/termiosdevice.h>
-#include <stdbool.h>
+#include <bspopts.h>
 #include <stdint.h>
 
+#include "bsp/rpi-gpio.h"
+#include "rtems/rtems/status.h"
+#include "rtems/termiosdevice.h"
+
+typedef enum {
+    PL011_CONSOLE_DEVICE,
+    MINI_UART_CONSOLE_DEVICE,
+} bsp_console_device_type;
+
 typedef struct {
-    rtems_termios_device_context context;
-    uintptr_t regs_base;
-    uint32_t clock;
-    const uint32_t initial_baud;
-} mini_uart_context;
+    unsigned int tx_pin;
+    unsigned int rx_pin;
+    gpio_function alt_func;
+} bsp_console_device_gpio_metadata;
 
-extern const rtems_termios_device_handler mini_uart_polled_handler;
-extern const rtems_termios_device_handler mini_uart_irq_driven_handler;
+typedef struct {
+    const char* file;
+    const bsp_console_device_type type;
+    rtems_termios_device_context* context;
+    const rtems_termios_device_handler* handler;
+    const bsp_console_device_gpio_metadata gpio;
+} bsp_console_device;
 
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H */
+rtems_status_code console_device_init_gpio(
+    const bsp_console_device_gpio_metadata* metadata);
+
+#if RTEMS_BSP == raspberrypi4b
+
+typedef enum {
+    UART0,
+    UART1,
+    UART2,
+    UART3,
+    UART4,
+    UART5,
+
+    UART_COUNT,
+} bsp_console_device_port;
+
+extern const bsp_console_device raspberrypi4b_console_devices[UART_COUNT];
+
+#endif /* raspberrypi4b */
+
+#endif /* LIBBSP_AARCH64_RASPBERRYPI_BSP_CONSOLE_DEVICES_H */
