@@ -1,0 +1,21 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: option
+name: BSP_CONSOLE_USE_INTERRUPTS
+description: Use interrupt driven mode for console devices.
+
+actions:
+  - get-boolean: null
+  - define-condition: null
+
+default:
+  - enabled-by:
+      - aarch64/raspberrypi4b
+    value: true
+
+links: []

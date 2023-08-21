@@ -39,7 +39,6 @@
 
 #include "bsp/bcm2711.h"
 #include "bsp/console/devices.h"
-#include "bsp/rpi-gpio.h"
 #include "dev/serial/mini-uart.h"
 #include "dev/serial/pl011.h"
 
@@ -48,6 +47,7 @@ static pl011_context uart0 = {
     .regs_base    = BCM2711_UART0_BASE,
     .clock        = BSP_PL011_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_PL011_UART,
 };
 
 static mini_uart_context uart1 = {
@@ -55,6 +55,7 @@ static mini_uart_context uart1 = {
     .regs_base    = BCM2711_UART1_BASE,
     .clock        = BSP_SYSTEM_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_AUX,
 };
 
 static pl011_context uart2 = {
@@ -62,24 +63,28 @@ static pl011_context uart2 = {
     .regs_base    = BCM2711_UART2_BASE,
     .clock        = BSP_PL011_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_PL011_UART,
 };
 static pl011_context uart3 = {
     .context      = RTEMS_TERMIOS_DEVICE_CONTEXT_INITIALIZER("uart3"),
     .regs_base    = BCM2711_UART3_BASE,
     .clock        = BSP_PL011_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_PL011_UART,
 };
 static pl011_context uart4 = {
     .context      = RTEMS_TERMIOS_DEVICE_CONTEXT_INITIALIZER("uart4"),
     .regs_base    = BCM2711_UART4_BASE,
     .clock        = BSP_PL011_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_PL011_UART,
 };
 static pl011_context uart5 = {
     .context      = RTEMS_TERMIOS_DEVICE_CONTEXT_INITIALIZER("uart5"),
     .regs_base    = BCM2711_UART5_BASE,
     .clock        = BSP_PL011_CLOCK_FREQ,
     .initial_baud = BSP_CONSOLE_BAUD,
+    .irq          = BCM2711_IRQ_PL011_UART,
 };
 
 const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {

@@ -38,7 +38,6 @@
 #define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
 
 #include <rtems/termiosdevice.h>
-#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -46,9 +45,9 @@ typedef struct {
     uintptr_t regs_base;
     uint32_t clock;
     const uint32_t initial_baud;
+    const unsigned int irq;
 } mini_uart_context;
 
-extern const rtems_termios_device_handler mini_uart_polled_handler;
-extern const rtems_termios_device_handler mini_uart_irq_driven_handler;
+extern const rtems_termios_device_handler mini_uart_handler;
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H */

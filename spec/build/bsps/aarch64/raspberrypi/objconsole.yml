@@ -38,3 +38,5 @@ links:
     uid: optclockpl011freq
   - role: build-dependency
     uid: optclocksystemfreq
+  - role: build-dependency
+    uid: optconsoleirq

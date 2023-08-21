@@ -37,6 +37,7 @@
 #include "dev/serial/mini-uart.h"
 
 #include <bsp/utility.h>
+#include <bspopts.h>
 #include <rtems/libio.h>
 #include <rtems/termiosdevice.h>
 #include <rtems/termiostypes.h>
@@ -88,24 +89,21 @@ static void write_irq_driven(rtems_termios_device_context *base,
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term);
 
-const rtems_termios_device_handler mini_uart_polled_handler = {
-    .first_open     = first_open,
-    .last_close     = NULL,
-    .poll_read      = read_char_polled,
-    .write          = write_polled,
+const rtems_termios_device_handler mini_uart_handler = {
+    .first_open = first_open,
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    .last_close = last_close,
+    .mode       = TERMIOS_IRQ_DRIVEN,
+    .poll_read  = NULL,
+    .write      = write_irq_driven,
+#else
+    .last_close = NULL,
+    .mode       = TERMIOS_POLLED,
+    .poll_read  = read_char_polled,
+    .write      = write_polled,
+#endif
     .set_attributes = set_attributes,
     .ioctl          = NULL,
-    .mode           = TERMIOS_POLLED,
-};
-
-const rtems_termios_device_handler mini_uart_irq_driven_handler = {
-    .first_open     = first_open,
-    .last_close     = NULL,
-    .poll_read      = NULL,
-    .write          = write_irq_driven,
-    .set_attributes = set_attributes,
-    .ioctl          = NULL,
-    .mode           = TERMIOS_IRQ_DRIVEN,
 };
 
 static bool first_open(struct rtems_termios_tty *tty,
@@ -247,7 +245,7 @@ static bool set_attributes(rtems_termios_device_context *base,
     IIR_REG(regs_base) |= (IIR_REG_CLEAR_RXFIFO | IIR_REG_CLEAR_TXFIFO);
 
     /* Set the baudrate */
-    speed_t baud = rtems_termios_number_to_baud(term->c_ispeed);
+    speed_t baud = rtems_termios_number_to_baud(term->c_ospeed);
     if (baud == B0)
         return false;
     BAUD_REG(regs_base) = ctx->clock / (baud * 8) - 1;
