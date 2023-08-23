@@ -5,7 +5,7 @@
  *
  * @ingroup RTEMSBSPsAArch64RaspberryPi
  *
- * @brief PL011 UART Device Driver
+ * @brief Mini UART Device Driver
  */
 
 /*
@@ -54,11 +54,11 @@
 #define IER_REG_TXE             BSP_BIT32(0)
 #define IER_REG_RXE             BSP_BIT32(1)
 #define IIR_REG(base)           REG(base + 0x08)
+#define IIR_REG_IRQ_NOT_PENDING BSP_BIT32(0)
 #define IIR_REG_TXFIFO_EMPTY    BSP_BIT32(1)
 #define IIR_REG_RXFIFO_HAS_DATA BSP_BIT32(2)
 #define IIR_REG_CLEAR_RXFIFO    BSP_BIT32(1)
 #define IIR_REG_CLEAR_TXFIFO    BSP_BIT32(2)
-#define IIR_REG_IRQ_NOT_PENDING BSP_BIT32(0)
 #define LCR_REG(base)           REG(base + 0x0c)
 #define LCR_REG_WLEN_8          BSP_BIT32(0)
 #define MCR_REG(base)           REG(base + 0x10)
@@ -82,39 +82,99 @@ static bool first_open(struct rtems_termios_tty *tty,
 static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args);
+#else
+static int read_char_polled(rtems_termios_device_context *ctx);
 #endif
 
-static int read_char_polled(rtems_termios_device_context *ctx);
-
-static void write_polled(rtems_termios_device_context *base, const char *buf,
+static void write_buffer(rtems_termios_device_context *base, const char *buf,
                          size_t n);
-
-static void write_irq_driven(rtems_termios_device_context *base,
-                             const char *buf, size_t n);
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term);
 
 const rtems_termios_device_handler mini_uart_handler = {
     .first_open = first_open,
+    .write      = write_buffer,
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     .last_close = last_close,
-    .mode       = TERMIOS_IRQ_DRIVEN,
     .poll_read  = NULL,
-    .write      = write_irq_driven,
+    .mode       = TERMIOS_IRQ_DRIVEN,
 #else
     .last_close = NULL,
-    .mode       = TERMIOS_POLLED,
     .poll_read  = read_char_polled,
-    .write      = write_polled,
+    .mode       = TERMIOS_POLLED,
 #endif
     .set_attributes = set_attributes,
     .ioctl          = NULL,
 };
 
-static inline int read_char(uintptr_t regs_base) {
+static inline char read_char(uintptr_t regs_base) {
     return IO_REG(regs_base) & IO_REG_DATA_MASK;
 }
+
+static inline void write_char(uintptr_t regs_base, char ch) {
+    IO_REG(regs_base) = ch;
+}
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+static inline void clear_irq(uintptr_t regs_base, uint32_t irq_mask) {
+    /* ICR(regs_base) |= irq_mask; */
+}
+
+static void enable_irq(uintptr_t regs_base, uint32_t irq_mask) {
+    /* IMSC(regs_base) |= irq_mask; */
+}
+#endif
+
+static inline void disable_irq(uintptr_t regs_base, uint32_t irq_mask) {
+    IER_REG(regs_base) &= ~irq_mask;
+}
+
+static void write_char_polled(rtems_termios_device_context *base, char ch) {
+    const mini_uart_context *ctx = (void *)base;
+    const uintptr_t regs_base    = ctx->regs_base;
+
+    /* Wait until the transmitter is idle */
+    while (!(LSR_REG(regs_base) & LSR_REG_TXIDLE))
+        ;
+
+    write_char(regs_base, ch);
+}
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+static void irq_handler(void *arg) {
+    rtems_termios_tty *tty = arg;
+    mini_uart_context *ctx = rtems_termios_get_device_context(tty);
+    uintptr_t regs_base    = ctx->regs_base;
+
+    uint32_t mis = MIS(regs_base);
+
+    /* Clear all raised interrupts */
+    clear_irq(regs_base, mis);
+
+    // RXFIFO got data
+    if (mis & (IRQ_RT_BIT | IRQ_RX_BIT)) {
+        char buf[FIFO_SIZE];
+
+        unsigned int i = 0;
+        while (i < sizeof(buf) && !is_rxfifo_empty(regs_base))
+            buf[i++] = read_char(regs_base);
+
+        rtems_termios_enqueue_raw_characters(tty, buf, i);
+    }
+
+    /* Transmission was queued last time */
+    if (ctx->transmitting) {
+        /* Mark it as done */
+        ctx->transmitting = false;
+        int sent          = ctx->tx_queued;
+        ctx->tx_queued    = 0;
+
+        disable_irq(regs_base, IRQ_TX_BIT);
+        rtems_termios_dequeue_characters(tty, sent);
+    }
+}
+#endif
 
 static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
@@ -122,10 +182,38 @@ static bool first_open(struct rtems_termios_tty *tty,
                        rtems_libio_open_close_args_t *args) {
     const mini_uart_context *ctx = (void *)base;
 
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    ctx->transmitting = false;
+    ctx->tx_queued    = 0;
+    ctx->first_send   = true;
+#endif
+
     if (rtems_termios_set_initial_baud(tty, ctx->initial_baud))
         return false;
 
-    return set_attributes(base, term);
+    if (!set_attributes(base, term))
+        return false;
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    uintptr_t regs_base = ctx->regs_base;
+
+    IFLS(regs_base) &= ~(IFLS_RXIFLSEL_MASK | IFLS_TXIFLSEL_MASK);
+    IFLS(regs_base) |= IFLS_RXIFLSEL_ONE_HALF | IFLS_TXIFLSEL_ONE_HALF;
+    LCRH(regs_base) |= LCRH_FEN;
+
+    /* Disable all interrupts */
+    disable_irq(regs_base, IRQ_MASK);
+
+    rtems_status_code sc = rtems_interrupt_handler_install(
+        ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, tty);
+    if (sc != RTEMS_SUCCESSFUL)
+        return false;
+
+    clear_irq(regs_base, IRQ_MASK);
+    enable_irq(regs_base, IRQ_RT_BIT | IRQ_RX_BIT);
+#endif
+
+    return true;
 }
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
@@ -133,7 +221,7 @@ static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args) {
     const mini_uart_context *ctx = (void *)base;
-    /* rtems_interrupt_handler_remove(ctx->irq, irq_handler, tty); */
+    rtems_interrupt_handler_remove(ctx->irq, irq_handler, tty);
 }
 #else
 static int read_char_polled(rtems_termios_device_context *base) {
@@ -149,74 +237,42 @@ static int read_char_polled(rtems_termios_device_context *base) {
 }
 #endif
 
-static size_t read_irq_driven(mini_uart_context *ctx, char *buffer,
-                              size_t size) {
-    const uintptr_t regs_base = ctx->regs_base;
-
-    unsigned int i = 0;
-    while (i < size) {
-        const uint32_t iir = IIR_REG(regs_base);
-
-        /* No interrupt has been raised */
-        if (iir & IIR_REG_IRQ_NOT_PENDING)
-            break;
-
-        /* Data has been received */
-        if (iir & IIR_REG_RXFIFO_HAS_DATA) {
-            buffer[i] = read_char(regs_base);
-            i++;
-        }
-    }
-
-    return i;
-}
-
-static inline void write_char(uintptr_t regs_base, char ch) {
-    IO_REG(regs_base) = ch;
-}
-
-static void write_char_polled(rtems_termios_device_context *base, char ch) {
-    const mini_uart_context *ctx = (void *)base;
-    const uintptr_t regs_base    = ctx->regs_base;
-
-    /* Wait until the transmitter is idle */
-    while (!(LSR_REG(regs_base) & LSR_REG_TXIDLE))
-        ;
-
-    write_char(regs_base, ch);
-}
-
-static void write_polled(rtems_termios_device_context *ctx, const char *buf,
+static void write_buffer(rtems_termios_device_context *base, const char *buf,
                          size_t n) {
-    for (size_t i = 0; i < n; i++)
-        write_char_polled(ctx, buf[i]);
-}
-
-static void write_irq_driven(rtems_termios_device_context *base,
-                             const char *buffer, size_t n) {
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
     mini_uart_context *ctx = (void *)base;
     uintptr_t regs_base    = ctx->regs_base;
+    if (n > 0) {
+        const char *p = buf;
+        enable_irq(regs_base, IRQ_TX_BIT);
 
-    if (n == 0) {
         /*
-         * Zero value indicates that the transmitter is now inactive. The
-         * output buffer is empty in this case, so interrupts can be disabled.
+         * The PL011 IP in the Versal needs preloading the TX FIFO with
+         * exactly 17 characters for the first TX interrupt to be
+         * generated.
          */
-        IER_REG(regs_base) &= ~IER_REG_TXE;
+        if (ctx->first_send) {
+            ctx->first_send = false;
+            for (int i = 0; i < 17; ++i)
+                write_char(regs_base, '\r');
+        }
 
-        return;
+        size_t remaining = n;
+        while (!is_txfifo_full(regs_base) && remaining > 0) {
+            write_char(regs_base, *p);
+            p++;
+            remaining--;
+        }
+
+        ctx->tx_queued    = n - remaining;
+        ctx->transmitting = true;
     }
 
-    /*
-     * Tell the device to transmit some characters from buf (less than
-     * or equal to n).  When the device is finished it should raise an
-     * interrupt.  The interrupt handler will notify Termios that these
-     * characters have been transmitted and this may trigger this write
-     * function again.  You may have to store the number of outstanding
-     * characters in the device data structure.
-     */
-    for (unsigned int i = 0; i < 1; i++)
-        write_char(regs_base, buffer[i]);
+    // TODO: disable irq for n == 0?
+#else
+    for (size_t i = 0; i < n; i++)
+        write_char_polled(base, buf[i]);
+#endif
 }
 
 static bool set_attributes(rtems_termios_device_context *base,
@@ -225,10 +281,11 @@ static bool set_attributes(rtems_termios_device_context *base,
     const uintptr_t regs_base = ctx->regs_base;
 
     /* Disable interrupts */
-    IER_REG(regs_base) &= ~(IER_REG_RXE | IER_REG_TXE);
+    disable_irq(regs_base, IER_REG_RXE | IER_REG_TXE);
 
     /* Disable data transfers */
     CNTL_REG(regs_base) &= ~(CNTL_REG_RXE | CNTL_REG_TXE);
+    uint32_t cntl = CNTL_REG(regs_base);
 
     /* Set the character size */
     switch (term->c_cflag & CSIZE) {
@@ -236,23 +293,14 @@ static bool set_attributes(rtems_termios_device_context *base,
             LCR_REG(regs_base) |= LCR_REG_WLEN_8;
             break;
         case CS7:
-            LCR_REG(regs_base) &= ~LCR_REG_WLEN_8;
         default:
-            /* Mini UART supports only 7-bit and 8-bit character sizes. */
-            return false;
-    }
-
-    /* Configure receiver */
-    if (term->c_cflag & CREAD) {
-        CNTL_REG(regs_base) |= CNTL_REG_RXE;
-        /* if (ctx->irq_enabled) */
-        /*     IER_REG(regs_base) |= IER_REG_RXE; */
+            LCR_REG(regs_base) &= ~LCR_REG_WLEN_8;
     }
 
     /*
      * TODO:
-     * Add hardware-flow control. For now, this just asserts RTS HIGH all the
-     * time.
+     * Add hardware-flow control.
+     * For now, this just asserts RTS HIGH all the time.
      */
     MCR_REG(regs_base) &= ~MCR_REG_RTS_LOW;
 
@@ -263,56 +311,22 @@ static bool set_attributes(rtems_termios_device_context *base,
     speed_t baud = rtems_termios_number_to_baud(term->c_ospeed);
     if (baud == B0)
         return false;
-    BAUD_REG(regs_base) = ctx->clock / (baud * 8) - 1;
+    BAUD_REG(regs_base) = ctx->clock / 8 / baud - 1;
+
+    /* Configure receiver */
+    if (term->c_cflag & CREAD)
+        cntl |= CNTL_REG_RXE;
 
     /* Re-enable transmission */
-    CNTL_REG(regs_base) |= CNTL_REG_TXE;
+    cntl |= CNTL_REG_TXE;
+    CNTL_REG(regs_base) = cntl;
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    /* if (ctx->irq_enabled) */
+    /*     IER_REG(regs_base) |= IER_REG_RXE; */
     /* if (ctx->irq_enabled) */
     /*     IER_REG(regs_base) |= IER_REG_TXE; */
+#endif
 
     return true;
 }
-
-static void interrupt_handler(void *arg) {
-    rtems_termios_tty *tty;
-    mini_uart_context *ctx;
-
-    tty = arg;
-    ctx = rtems_termios_get_device_context(tty);
-
-    char buffer[FIFO_SIZE];
-
-    /*
-     * Check if we have received something. The function reads the received
-     * characters from the device and stores them in the buffer. It returns the
-     * number of read characters.
-     */
-    size_t n = read_irq_driven(ctx, buffer, sizeof(buffer));
-    if (n > 0)
-        /* Hand the data over to the Termios infrastructure */
-        rtems_termios_enqueue_raw_characters(tty, buffer, n);
-
-    /*
-     * Check if something got transmitted. The function returns the
-     * number of transmitted characters since the last write to the
-     * device.
-     */
-    /* n = my_driver_transmitted_chars(ctx); */
-    if (n > 0)
-        /*
-         * Notify Termios that we have transmitted some characters.  It
-         * will call now the interrupt write function if more characters
-         * are ready for transmission.
-         */
-        rtems_termios_dequeue_characters(tty, n);
-}
-
-/* void uart_init(const unsigned baudrate, uart_newchar_t newchar) { */
-/*   if (newchar != NULL) { */
-/*     // Install the IRQ handler and enable read interrupts. */
-/*     s_callback = newchar; */
-/*     isr_addhandler(ISR_IRQ, uart_read_isr); */
-/*     mem_write32(BASE_ADDR + AUX_MU_IER_REG, 5); */
-/*     isr_enablebasic(29); */
-/*   } */
-/* } */

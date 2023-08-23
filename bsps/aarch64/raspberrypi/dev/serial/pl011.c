@@ -147,6 +147,18 @@ static inline char read_char(uintptr_t regs_base) {
     return DR(regs_base) & DR_DATA_MASK;
 }
 
+static inline void write_char(uintptr_t regs_base, char ch) {
+    DR(regs_base) = ch;
+}
+
+static inline bool is_rxfifo_empty(uintptr_t regs_base) {
+    return FR(regs_base) & FR_RXFE;
+}
+
+static inline bool is_txfifo_full(uintptr_t regs_base) {
+    return FR(regs_base) & FR_TXFF;
+}
+
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static inline void clear_irq(uintptr_t regs_base, uint32_t irq_mask) {
     ICR(regs_base) |= irq_mask;
@@ -161,18 +173,6 @@ static inline void disable_irq(uintptr_t regs_base, uint32_t irq_mask) {
     IMSC(regs_base) &= ~irq_mask;
 }
 
-static inline bool is_rxfifo_empty(uintptr_t regs_base) {
-    return FR(regs_base) & FR_RXFE;
-}
-
-static inline bool is_txfifo_full(uintptr_t regs_base) {
-    return FR(regs_base) & FR_TXFF;
-}
-
-static inline void write_char(uintptr_t regs_base, char ch) {
-    DR(regs_base) = ch;
-}
-
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static void irq_handler(void *arg) {
     rtems_termios_tty *tty = arg;
@@ -181,10 +181,10 @@ static void irq_handler(void *arg) {
 
     uint32_t mis = MIS(regs_base);
 
-    // Clear all raised interrupts
+    /* Clear all raised interrupts */
     clear_irq(regs_base, mis);
 
-    // RXFIFO got data
+    /* RXFIFO got data */
     if (mis & (IRQ_RT_BIT | IRQ_RX_BIT)) {
         char buf[FIFO_SIZE];
 

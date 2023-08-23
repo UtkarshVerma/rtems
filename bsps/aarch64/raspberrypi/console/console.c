@@ -66,6 +66,10 @@ static void output_char(char ch) {
     handlers[config->type]->write(config->context, &ch, 1);
 }
 
+static int poll_char(void) {
+    return handlers[config->type]->poll_read(config->context);
+}
+
 rtems_device_driver console_initialize(rtems_device_major_number major,
                                        rtems_device_minor_number minor,
                                        void* arg) {
@@ -91,4 +95,4 @@ rtems_device_driver console_initialize(rtems_device_major_number major,
 }
 
 BSP_output_char_function_type BSP_output_char   = output_char;
-BSP_polling_getchar_function_type BSP_poll_char = NULL;
+BSP_polling_getchar_function_type BSP_poll_char = poll_char;

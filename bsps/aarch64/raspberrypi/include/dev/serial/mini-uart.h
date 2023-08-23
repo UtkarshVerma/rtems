@@ -45,7 +45,11 @@ typedef struct {
     uintptr_t regs_base;
     uint32_t clock;
     const uint32_t initial_baud;
-    const unsigned int irq;
+
+    volatile size_t tx_queued;
+    volatile bool transmitting;
+    bool first_send;
+    const rtems_vector_number irq;
 } mini_uart_context;
 
 extern const rtems_termios_device_handler mini_uart_handler;
