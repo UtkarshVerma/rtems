@@ -93,7 +93,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyAMA0",
             .type    = PL011_CONSOLE_DEVICE,
             .context = &uart0.context,
-            .handler = &pl011_polled_handler,
             .gpio    = {14, 15, GPIO_AF0},
         },
     [UART1] =
@@ -101,7 +100,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyS0",
             .type    = MINI_UART_CONSOLE_DEVICE,
             .context = &uart1.context,
-            .handler = &mini_uart_polled_handler,
             .gpio    = {14, 15, GPIO_AF5},
         },
 
@@ -110,7 +108,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyAMA1",
             .type    = PL011_CONSOLE_DEVICE,
             .context = &uart2.context,
-            .handler = &pl011_polled_handler,
             .gpio    = {0, 1, GPIO_AF4},
         },
 
@@ -119,7 +116,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyAMA2",
             .type    = PL011_CONSOLE_DEVICE,
             .context = &uart3.context,
-            .handler = &pl011_polled_handler,
             .gpio    = {4, 5, GPIO_AF4},
         },
 
@@ -128,7 +124,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyAMA3",
             .type    = PL011_CONSOLE_DEVICE,
             .context = &uart4.context,
-            .handler = &pl011_polled_handler,
             .gpio    = {8, 9, GPIO_AF4},
         },
 
@@ -137,7 +132,6 @@ const bsp_console_device raspberrypi4b_console_devices[UART_COUNT] = {
             .file    = "/dev/ttyAMA4",
             .type    = PL011_CONSOLE_DEVICE,
             .context = &uart5.context,
-            .handler = &pl011_polled_handler,
             .gpio    = {12, 13, GPIO_AF4},
         },
 };

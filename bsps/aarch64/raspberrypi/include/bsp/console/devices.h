@@ -47,6 +47,8 @@
 typedef enum {
     PL011_CONSOLE_DEVICE,
     MINI_UART_CONSOLE_DEVICE,
+
+    CONSOLE_DEVICE_TYPE_COUNT,
 } bsp_console_device_type;
 
 typedef struct {
@@ -59,7 +61,6 @@ typedef struct {
     const char* file;
     const bsp_console_device_type type;
     rtems_termios_device_context* context;
-    const rtems_termios_device_handler* handler;
     const bsp_console_device_gpio_metadata gpio;
 } bsp_console_device;
 

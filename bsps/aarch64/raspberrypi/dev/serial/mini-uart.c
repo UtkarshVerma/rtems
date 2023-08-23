@@ -78,6 +78,12 @@ static bool first_open(struct rtems_termios_tty *tty,
                        struct termios *term,
                        rtems_libio_open_close_args_t *args);
 
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+static void last_close(rtems_termios_tty *tty,
+                       rtems_termios_device_context *base,
+                       rtems_libio_open_close_args_t *args);
+#endif
+
 static int read_char_polled(rtems_termios_device_context *ctx);
 
 static void write_polled(rtems_termios_device_context *base, const char *buf,
@@ -106,6 +112,10 @@ const rtems_termios_device_handler mini_uart_handler = {
     .ioctl          = NULL,
 };
 
+static inline int read_char(uintptr_t regs_base) {
+    return IO_REG(regs_base) & IO_REG_DATA_MASK;
+}
+
 static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        struct termios *term,
@@ -118,10 +128,14 @@ static bool first_open(struct rtems_termios_tty *tty,
     return set_attributes(base, term);
 }
 
-static inline int read_char(uintptr_t regs_base) {
-    return IO_REG(regs_base) & IO_REG_DATA_MASK;
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+static void last_close(rtems_termios_tty *tty,
+                       rtems_termios_device_context *base,
+                       rtems_libio_open_close_args_t *args) {
+    const mini_uart_context *ctx = (void *)base;
+    /* rtems_interrupt_handler_remove(ctx->irq, irq_handler, tty); */
 }
-
+#else
 static int read_char_polled(rtems_termios_device_context *base) {
     const mini_uart_context *ctx = (void *)base;
     const uintptr_t regs_base    = ctx->regs_base;
@@ -133,6 +147,7 @@ static int read_char_polled(rtems_termios_device_context *base) {
     /* There is no data to be read */
     return -1;
 }
+#endif
 
 static size_t read_irq_driven(mini_uart_context *ctx, char *buffer,
                               size_t size) {

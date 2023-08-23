@@ -46,6 +46,14 @@
 
 #include "bsp/aux.h"
 #include "bsp/console/devices.h"
+#include "dev/serial/mini-uart.h"
+#include "dev/serial/pl011.h"
+
+static const rtems_termios_device_handler*
+    handlers[CONSOLE_DEVICE_TYPE_COUNT] = {
+        [MINI_UART_CONSOLE_DEVICE] = &mini_uart_handler,
+        [PL011_CONSOLE_DEVICE]     = &pl011_handler,
+};
 
 #if RTEMS_BSP == rasbperrypi4b
 
@@ -55,7 +63,7 @@ static const bsp_console_device* config =
 #endif /* raspberrypi4b */
 
 static void output_char(char ch) {
-    config->handler->write(config->context, &ch, 1);
+    handlers[config->type]->write(config->context, &ch, 1);
 }
 
 rtems_device_driver console_initialize(rtems_device_major_number major,
@@ -68,10 +76,10 @@ rtems_device_driver console_initialize(rtems_device_major_number major,
 
     rtems_status_code status = console_device_init_gpio(&config->gpio);
     if (status != RTEMS_SUCCESSFUL)
-        bsp_fatal(BSP_FATAL_CONSOLE_INSTALL_0);
+        bsp_fatal(BSP_FATAL_CONSOLE_REGISTER_DEV_0);
 
-    status = rtems_termios_device_install(config->file, config->handler, NULL,
-                                          config->context);
+    status = rtems_termios_device_install(config->file, handlers[config->type],
+                                          NULL, config->context);
     if (status != RTEMS_SUCCESSFUL)
         bsp_fatal(BSP_FATAL_CONSOLE_INSTALL_0);
 
