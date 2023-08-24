@@ -241,9 +241,9 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
     }
 
     /*
-     * Termios will set n to zero to indicate that the transmitter is
-     * now inactive.  The output buffer is empty in this case.  The
-     * driver may disable the transmit interrupts now.
+     * Termios will set n to zero to indicate that the transmitter is now
+     * inactive. The output buffer is empty in this case. The driver may
+     * disable the transmit interrupts now.
      */
     disable_irq(regs_base, IER_REG_TXE);
 #else

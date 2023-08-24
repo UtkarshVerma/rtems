@@ -103,8 +103,6 @@
 #define IRQ_OE_BIT BSP_BIT32(10)
 #define IRQ_MASK   BSP_MSK32(0, 10)
 
-#define TX_IRQ BSP_BIT32(5)
-
 #define FIFO_SIZE 32
 
 static bool first_open(struct rtems_termios_tty *tty,
@@ -151,11 +149,11 @@ static inline void write_char(uintptr_t regs_base, char ch) {
 }
 
 static inline bool is_rxfifo_empty(uintptr_t regs_base) {
-    return FR(regs_base) & FR_RXFE;
+    return (FR(regs_base) & FR_RXFE) != 0;
 }
 
 static inline bool is_txfifo_full(uintptr_t regs_base) {
-    return FR(regs_base) & FR_TXFF;
+    return (FR(regs_base) & FR_TXFF) != 0;
 }
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
@@ -178,62 +176,34 @@ static void irq_handler(void *arg) {
     pl011_context *ctx     = rtems_termios_get_device_context(tty);
     uintptr_t regs_base    = ctx->regs_base;
 
-    uint32_t mis = MIS(regs_base);
-
-    /* Clear all raised interrupts */
-    clear_irq(regs_base, mis);
+    uint32_t irqs = MIS(regs_base);
 
     /* RXFIFO got data */
-    if (mis & (IRQ_RT_BIT | IRQ_RX_BIT)) {
+    if ((irqs & (IRQ_RT_BIT | IRQ_RX_BIT)) != 0) {
         char buf[FIFO_SIZE];
 
         unsigned int i = 0;
         while (i < sizeof(buf) && !is_rxfifo_empty(regs_base))
             buf[i++] = read_char(regs_base);
 
-        rtems_termios_enqueue_raw_characters(tty, buf, i);
+        (void)rtems_termios_enqueue_raw_characters(tty, buf, i);
     }
 
-    /* Transmission was queued last time */
-    if (ctx->transmitting) {
-        /* Mark it as done */
-        ctx->transmitting = false;
-        int sent          = ctx->tx_queued;
-        ctx->tx_queued    = 0;
+    /*
+     * Transmission was queued last time and TXFIFO is now empty, so mark the
+     * transaction as done.
+     */
+    if ((irqs & IRQ_TX_BIT) != 0) {
+        int sent             = ctx->tx_queued_chars;
+        ctx->tx_queued_chars = 0;
 
-        disable_irq(regs_base, IRQ_TX_BIT);
-        rtems_termios_dequeue_characters(tty, sent);
+        (void)rtems_termios_dequeue_characters(tty, sent);
     }
+
+    /* Clear all raised interrupts */
+    clear_irq(regs_base, irqs);
 }
 #endif
-
-static void write_char_polled(rtems_termios_device_context *base, char ch) {
-    const pl011_context *ctx = (void *)base;
-    uintptr_t regs_base      = ctx->regs_base;
-
-    /* Wait until TXFIFO has space */
-    while (is_txfifo_full(regs_base))
-        ;
-
-    write_char(regs_base, ch);
-}
-
-static void flush_txfifo(rtems_termios_device_context *base) {
-    const pl011_context *ctx = (void *)base;
-    uintptr_t regs_base      = ctx->regs_base;
-
-    int c = 4;
-    while (c-- > 0)
-        write_char_polled(base, '\r');
-
-    while (!(FR(regs_base) & FR_TXFE)) {
-        /* Wait for empty */
-    }
-
-    while ((FR(regs_base) & FR_BUSY) != 0) {
-        /* Wait for empty */
-    }
-}
 
 static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
@@ -242,15 +212,11 @@ static bool first_open(struct rtems_termios_tty *tty,
     pl011_context *ctx = (void *)base;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->transmitting = false;
-    ctx->tx_queued    = 0;
-    ctx->first_send   = true;
+    ctx->tx_queued_chars = 0;
 #endif
 
-    if (rtems_termios_set_initial_baud(tty, ctx->initial_baud))
+    if (rtems_termios_set_initial_baud(tty, ctx->initial_baud) != 0)
         return false;
-
-    flush_txfifo(base);
 
     if (!set_attributes(base, term))
         return false;
@@ -258,20 +224,22 @@ static bool first_open(struct rtems_termios_tty *tty,
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     uintptr_t regs_base = ctx->regs_base;
 
-    IFLS(regs_base) &= ~(IFLS_RXIFLSEL_MASK | IFLS_TXIFLSEL_MASK);
-    IFLS(regs_base) |= IFLS_RXIFLSEL_ONE_HALF | IFLS_TXIFLSEL_ONE_HALF;
-    LCRH(regs_base) |= LCRH_FEN;
+    /* Trigger interrupts when FIFOs are half-filled. */
+    uint32_t ifls = IFLS(regs_base);
+    ifls &= ~(IFLS_RXIFLSEL_MASK | IFLS_TXIFLSEL_MASK);
+    ifls |= IFLS_RXIFLSEL_SEVEN_EIGHTH | IFLS_TXIFLSEL_ONE_EIGHTH;
+    IFLS(regs_base) = ifls;
 
-    /* Disable all interrupts */
-    disable_irq(regs_base, IRQ_MASK);
+    /* TODO: Is this preloading really required? Maybe re-thinking is required
+     * for the IRQ handling state-machine. */
+    /* Preload the TXFIFO with a placebo value to get the interrupts going */
+    for (int i = 0; i < FIFO_SIZE / 8 + 1; i++)
+        write_char(regs_base, '\r');
 
     rtems_status_code sc = rtems_interrupt_handler_install(
         ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, tty);
     if (sc != RTEMS_SUCCESSFUL)
         return false;
-
-    clear_irq(regs_base, IRQ_MASK);
-    enable_irq(regs_base, IRQ_RT_BIT | IRQ_RX_BIT);
 #endif
 
     return true;
@@ -302,40 +270,29 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
     uintptr_t regs_base = ctx->regs_base;
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     if (n > 0) {
-        const char *p = buf;
-        enable_irq(regs_base, IRQ_TX_BIT);
-
-        /*
-         * The PL011 IP in the Versal needs preloading the TX FIFO with
-         * exactly 17 characters for the first TX interrupt to be
-         * generated.
-         */
-        if (ctx->first_send) {
-            ctx->first_send = false;
-            for (int i = 0; i < 17; ++i)
-                write_char(regs_base, '\r');
-        }
-
+        const char *p    = buf;
         size_t remaining = n;
         while (!is_txfifo_full(regs_base) && remaining > 0) {
             write_char(regs_base, *p);
+
             p++;
             remaining--;
         }
 
-        ctx->tx_queued    = n - remaining;
-        ctx->transmitting = true;
+        ctx->tx_queued_chars = n - remaining;
+        enable_irq(regs_base, IRQ_TX_BIT);
+        return;
     }
 
-    // TODO: disable irq for n == 0?
+    /*
+     * Termios will set n to zero to indicate that the transmitter is now
+     * inactive. The output buffer is empty in this case. The driver may
+     * disable the transmit interrupts now.
+     */
+    disable_irq(regs_base, IRQ_TX_BIT);
 #else
-    for (size_t i = 0; i < n; i++) {
-        /* Wait until TXFIFO is empty */
-        while (is_txfifo_full(regs_base))
-            ;
-
-        write_char(regs_base, buf[i]);
-    }
+    for (size_t i = 0; i < n; i++)
+        pl011_write_char_polled(base, buf[i]);
 #endif
 }
 
@@ -391,10 +348,10 @@ static bool set_attributes(rtems_termios_device_context *base,
     uint32_t lcrh = LCRH(regs_base) & LCRH_FEN;
 
     /* Mode: parity */
-    if (term->c_cflag & PARENB) {
+    if ((term->c_cflag & PARENB) != 0) {
         lcrh |= LCRH_PEN;
 
-        if (!(term->c_cflag & PARODD))
+        if ((term->c_cflag & PARODD) == 0)
             lcrh |= LCRH_EPS;
     }
 
@@ -415,7 +372,7 @@ static bool set_attributes(rtems_termios_device_context *base,
     }
 
     /* Mode: stop bits */
-    if (term->c_cflag & CSTOPB)
+    if ((term->c_cflag & CSTOPB) != 0)
         lcrh |= LCRH_STP2;
 
     /* Disable all interrupts */
@@ -425,9 +382,11 @@ static bool set_attributes(rtems_termios_device_context *base,
     CR(regs_base) &= ~(CR_UARTEN | CR_RXE | CR_TXE);
     uint32_t cr = CR(regs_base);
 
-    /* Wait for pending transactions, then flush the FIFOs */
+    /* Wait for pending transactions */
     while (!(FR(regs_base) & FR_TXFE) || (FR(regs_base) & FR_BUSY))
         ;
+
+    /* Disable both FIFOs */
     lcrh &= ~LCRH_FEN;
 
     /* Set the baudrate */
@@ -435,30 +394,47 @@ static bool set_attributes(rtems_termios_device_context *base,
     FBRD(regs_base) = fbrd;
     LCRH(regs_base) = lcrh;
 
+    /*
+     * NOTE: Flow control is untested
+     */
     /* Configure flow control */
     cr &= ~(CR_CTSEN | CR_RTSEN);
-    if (term->c_cflag & CCTS_OFLOW)
+    if ((term->c_cflag & CCTS_OFLOW) != 0)
         cr |= CR_CTSEN;
-    if (term->c_cflag & CRTS_IFLOW)
+    if ((term->c_cflag & CRTS_IFLOW) != 0)
         cr |= CR_RTSEN;
 
     /* Configure receiver */
-    if (term->c_cflag & CREAD)
+    const bool rx_enabled = (term->c_cflag & CREAD) != 0;
+    if (rx_enabled)
         cr |= CR_RXE;
 
     /* Re-enable UART */
     cr |= CR_UARTEN | CR_TXE;
     CR(regs_base) = cr;
 
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-    // TODO: respect CREAD
+    /* Re-enable both FIFOs */
+    LCRH(regs_base) |= LCRH_FEN;
 
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
     /* Clear all interrupts  */
     clear_irq(regs_base, IRQ_MASK);
 
     /* Re-enable RX interrupts */
-    enable_irq(regs_base, IRQ_RT_BIT | IRQ_RX_BIT);
+    if (rx_enabled)
+        enable_irq(regs_base, IRQ_RT_BIT | IRQ_RX_BIT);
 #endif
 
     return true;
+}
+
+void pl011_write_char_polled(rtems_termios_device_context *base, char ch) {
+    const pl011_context *ctx = (void *)base;
+    uintptr_t regs_base      = ctx->regs_base;
+
+    /* Wait until TXFIFO has space */
+    while (is_txfifo_full(regs_base))
+        ;
+
+    write_char(regs_base, ch);
 }

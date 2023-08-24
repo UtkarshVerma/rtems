@@ -54,6 +54,7 @@ typedef void (*write_char_polled_func)(rtems_termios_device_context*, char);
 static const write_char_polled_func
     write_char_polled[CONSOLE_DEVICE_TYPE_COUNT] = {
         [MINI_UART_CONSOLE_DEVICE] = mini_uart_write_char_polled,
+        [PL011_CONSOLE_DEVICE]     = pl011_write_char_polled,
 };
 
 static const rtems_termios_device_handler*

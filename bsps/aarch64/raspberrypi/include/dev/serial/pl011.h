@@ -37,6 +37,7 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H
 #define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H
 
+#include <bspopts.h>
 #include <rtems/rtems/intr.h>
 #include <rtems/termiosdevice.h>
 #include <stdint.h>
@@ -46,13 +47,15 @@ typedef struct {
     uintptr_t regs_base;
     uint32_t clock;
     const uint32_t initial_baud;
-
-    volatile size_t tx_queued;
-    volatile bool transmitting;
-    bool first_send;
     const rtems_vector_number irq;
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    volatile size_t tx_queued_chars;
+#endif
 } pl011_context;
 
 extern const rtems_termios_device_handler pl011_handler;
+
+void pl011_write_char_polled(rtems_termios_device_context* ctx, char ch);
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H */

@@ -38,6 +38,7 @@
 #define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
 
 #include <bspopts.h>
+#include <rtems/rtems/intr.h>
 #include <rtems/termiosdevice.h>
 #include <stdint.h>
 
