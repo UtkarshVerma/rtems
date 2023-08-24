@@ -49,6 +49,13 @@
 #include "dev/serial/mini-uart.h"
 #include "dev/serial/pl011.h"
 
+typedef void (*write_char_polled_func)(rtems_termios_device_context*, char);
+
+static const write_char_polled_func
+    write_char_polled[CONSOLE_DEVICE_TYPE_COUNT] = {
+        [MINI_UART_CONSOLE_DEVICE] = mini_uart_write_char_polled,
+};
+
 static const rtems_termios_device_handler*
     handlers[CONSOLE_DEVICE_TYPE_COUNT] = {
         [MINI_UART_CONSOLE_DEVICE] = &mini_uart_handler,
@@ -63,7 +70,7 @@ static const bsp_console_device* config =
 #endif /* raspberrypi4b */
 
 static void output_char(char ch) {
-    handlers[config->type]->write(config->context, &ch, 1);
+    write_char_polled[config->type](config->context, ch);
 }
 
 static int poll_char(void) {
@@ -82,8 +89,12 @@ rtems_device_driver console_initialize(rtems_device_major_number major,
     if (status != RTEMS_SUCCESSFUL)
         bsp_fatal(BSP_FATAL_CONSOLE_REGISTER_DEV_0);
 
-    status = rtems_termios_device_install(config->file, handlers[config->type],
-                                          NULL, config->context);
+    const rtems_termios_device_handler* handler = &pl011_handler;
+    if (config->type == MINI_UART_CONSOLE_DEVICE)
+        handler = &mini_uart_handler;
+
+    status = rtems_termios_device_install(config->file, handler, NULL,
+                                          config->context);
     if (status != RTEMS_SUCCESSFUL)
         bsp_fatal(BSP_FATAL_CONSOLE_INSTALL_0);
 

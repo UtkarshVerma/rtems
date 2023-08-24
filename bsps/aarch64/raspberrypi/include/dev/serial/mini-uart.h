@@ -46,12 +46,15 @@ typedef struct {
     uintptr_t regs_base;
     uint32_t clock;
     const uint32_t initial_baud;
-
-    volatile size_t tx_queued;
-    volatile bool transmitting;
     const rtems_vector_number irq;
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    volatile size_t tx_queued_chars;
+#endif
 } mini_uart_context;
 
 extern const rtems_termios_device_handler mini_uart_handler;
+
+void mini_uart_write_char_polled(rtems_termios_device_context* ctx, char ch);
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H */

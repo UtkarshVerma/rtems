@@ -47,31 +47,35 @@
 
 #define REG(addr) *(volatile uint32_t *)(addr)
 
+/*
+ * NOTE:
+ * The datasheet will specify swapped bits for RX and TX interrupts in IER_REG,
+ * which is incorrect. The correct values are used here.
+ */
 #define IO_REG(base)              REG(base + 0x00)
-#define IO_REG_DATA_MASK          0xff
+#define IO_REG_DATA_MASK          BSP_MSK32(0, 7)
 #define IER_REG(base)             REG(base + 0x04)
-#define IER_REG_TXE               BSP_BIT32(0)
-#define IER_REG_RXE               BSP_BIT32(1)
+#define IER_REG_RXE               BSP_BIT32(0)
+#define IER_REG_TXE               BSP_BIT32(1)
 #define IER_REG_IRQ_MASK          BSP_MSK32(0, 1)
 #define IIR_REG(base)             REG(base + 0x08)
 #define IIR_REG_IRQ_NOT_PENDING   BSP_BIT32(0)
 #define IIR_REG_TXFIFO_EMPTY      BSP_BIT32(1)
-#define IIR_REG_RXFIFO_HAS_DATA   BSP_BIT32(2)
 #define IIR_REG_CLEAR_RXFIFO      BSP_BIT32(1)
+#define IIR_REG_RXFIFO_GOT_DATA   BSP_BIT32(2)
 #define IIR_REG_CLEAR_TXFIFO      BSP_BIT32(2)
 #define LCR_REG(base)             REG(base + 0x0c)
 #define LCR_REG_WLEN_8            BSP_BIT32(0)
 #define MCR_REG(base)             REG(base + 0x10)
 #define MCR_REG_RTS_LOW           BSP_BIT32(1)
-#define LSR_REG(base)             REG(base + 0x14)
-#define LSR_REG_DATA_READY        BSP_BIT32(0)
-#define LSR_REG_TXIDLE            BSP_BIT32(6)
 #define CNTL_REG(base)            REG(base + 0x20)
 #define CNTL_REG_TXE              BSP_BIT32(0)
 #define CNTL_REG_RXE              BSP_BIT32(1)
 #define STAT_REG(base)            REG(base + 0x24)
 #define STAT_REG_RXFIFO_NOT_EMPTY BSP_BIT32(0)
-#define STAT_REG_TXFIFO_NOT_FULL  BSP_BIT32(1)
+#define STAT_REG_TXFIFO_HAS_SPACE BSP_BIT32(1)
+#define STAT_REG_TXFIFO_FULL      BSP_BIT32(5)
+#define STAT_REG_TX_IDLE          BSP_BIT32(3)
 #define BAUD_REG(base)            REG(base + 0x28)
 
 #define FIFO_SIZE 8
@@ -133,12 +137,11 @@ static inline bool is_rxfifo_empty(uintptr_t regs_base) {
     return (STAT_REG(regs_base) & STAT_REG_RXFIFO_NOT_EMPTY) != 0;
 }
 
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-
-static inline bool is_txfifo_full(uintptr_t regs_base) {
-    return (STAT_REG(regs_base) & STAT_REG_TXFIFO_NOT_FULL) != 0;
+static inline bool txfifo_has_space(uintptr_t regs_base) {
+    return (STAT_REG(regs_base) & STAT_REG_TXFIFO_HAS_SPACE) != 0;
 }
 
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
 static void irq_handler(void *arg) {
     rtems_termios_tty *tty = arg;
     mini_uart_context *ctx = rtems_termios_get_device_context(tty);
@@ -147,7 +150,7 @@ static void irq_handler(void *arg) {
     uint32_t irqs = IIR_REG(regs_base);
 
     /* RXFIFO got data */
-    if ((irqs & IIR_REG_RXFIFO_HAS_DATA) != 0) {
+    if ((irqs & IIR_REG_RXFIFO_GOT_DATA) != 0) {
         char buf[FIFO_SIZE];
 
         unsigned int i = 0;
@@ -161,10 +164,9 @@ static void irq_handler(void *arg) {
      * Transmission was queued last time and TXFIFO is now empty, so mark the
      * transaction as done.
      */
-    if ((irqs & IIR_REG_TXFIFO_EMPTY) != 0 && ctx->transmitting == true) {
-        ctx->transmitting = false;
-        int sent          = ctx->tx_queued;
-        ctx->tx_queued    = 0;
+    if ((irqs & IIR_REG_TXFIFO_EMPTY) != 0) {
+        int sent             = ctx->tx_queued_chars;
+        ctx->tx_queued_chars = 0;
 
         (void)rtems_termios_dequeue_characters(tty, sent);
     }
@@ -178,14 +180,13 @@ static bool first_open(struct rtems_termios_tty *tty,
     mini_uart_context *ctx = (void *)base;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->transmitting = false;
-    ctx->tx_queued    = 0;
+    ctx->tx_queued_chars = 0;
 #endif
 
     if (rtems_termios_set_initial_baud(tty, ctx->initial_baud) != 0)
         return false;
 
-    if (set_attributes(base, term) == false)
+    if (!set_attributes(base, term))
         return false;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
@@ -211,7 +212,7 @@ static int read_char_polled(rtems_termios_device_context *base) {
     const uintptr_t regs_base    = ctx->regs_base;
 
     /* Data is available to be read */
-    if (is_rxfifo_empty(regs_base) == false)
+    if (!is_rxfifo_empty(regs_base))
         return read_char(regs_base);
 
     /* There is no data to be read */
@@ -226,19 +227,16 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
     uintptr_t regs_base    = ctx->regs_base;
 
     if (n > 0) {
-        const char *p = buf;
-        enable_irq(regs_base, IER_REG_TXE);
-
+        const char *p    = buf;
         size_t remaining = n;
-        while ((is_txfifo_full(regs_base) == false) && remaining > 0) {
+        while (txfifo_has_space(regs_base) && remaining > 0) {
             write_char(regs_base, *p);
             p++;
             remaining--;
         }
 
-        ctx->tx_queued    = n - remaining;
-        ctx->transmitting = true;
-
+        ctx->tx_queued_chars = n - remaining;
+        enable_irq(regs_base, IER_REG_TXE);
         return;
     }
 
@@ -247,19 +245,13 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
      * now inactive.  The output buffer is empty in this case.  The
      * driver may disable the transmit interrupts now.
      */
-    disable_irq(regs_base, IER_REG_RXE);
-
+    disable_irq(regs_base, IER_REG_TXE);
 #else
     const mini_uart_context *ctx = (void *)base;
     const uintptr_t regs_base    = ctx->regs_base;
 
-    for (size_t i = 0; i < n; i++) {
-        /* Wait until the transmitter is idle */
-        while ((LSR_REG(regs_base) & LSR_REG_TXIDLE) == 0)
-            ;
-
-        write_char(regs_base, buf[i]);
-    }
+    for (size_t i = 0; i < n; i++)
+        write_char_polled(buf[i]);
 #endif
 }
 
@@ -275,7 +267,7 @@ static bool set_attributes(rtems_termios_device_context *base,
     CNTL_REG(regs_base) &= ~(CNTL_REG_RXE | CNTL_REG_TXE);
     uint32_t cntl = CNTL_REG(regs_base);
 
-    /* Clear both FIFOs */
+    /* Flush both FIFOs */
     IIR_REG(regs_base) = (IIR_REG_CLEAR_RXFIFO | IIR_REG_CLEAR_TXFIFO);
 
     /*
@@ -306,24 +298,29 @@ static bool set_attributes(rtems_termios_device_context *base,
 
     /* Re-enable transmission */
     cntl |= CNTL_REG_TXE;
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-    uint32_t ier = IER_REG_TXE;
-#endif
 
     /* Configure receiver */
-    if ((term->c_cflag & CREAD) != 0) {
+    const bool rx_enabled = (term->c_cflag & CREAD) != 0;
+    if (rx_enabled)
         cntl |= CNTL_REG_RXE;
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-        ier |= IER_REG_RXE;
-#endif
-    }
 
     /* Commit changes to the peripheral */
     CNTL_REG(regs_base) = cntl;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    IER_REG(regs_base) |= ier;
+    /* Re-enable RX interrupts */
+    if (rx_enabled)
+        enable_irq(regs_base, IER_REG_RXE);
 #endif
 
     return true;
+}
+
+void mini_uart_write_char_polled(rtems_termios_device_context *base, char ch) {
+    mini_uart_context *ctx = (void *)base;
+    uintptr_t regs_base    = ctx->regs_base;
+    while (!txfifo_has_space(regs_base))
+        ;
+
+    write_char(regs_base, ch);
 }
