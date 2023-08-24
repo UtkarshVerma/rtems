@@ -37,6 +37,7 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
 #define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
 
+#include <bspopts.h>
 #include <rtems/termiosdevice.h>
 #include <stdint.h>
 
@@ -48,7 +49,6 @@ typedef struct {
 
     volatile size_t tx_queued;
     volatile bool transmitting;
-    bool first_send;
     const rtems_vector_number irq;
 } mini_uart_context;
 

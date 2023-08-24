@@ -43,9 +43,7 @@
 #include <rtems/termiostypes.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-
-#include "sys/_termios.h"
+#include <sys/_termios.h>
 
 #define REG(addr) *(volatile uint32_t *)(addr)
 
@@ -95,6 +93,7 @@
 #define MIS(base)                  REG(base + 0x40)
 #define ICR(base)                  REG(base + 0x44)
 
+/* Applies to IMSC, ICR, and MIS */
 #define IRQ_RX_BIT BSP_BIT32(4)
 #define IRQ_RT_BIT BSP_BIT32(6)
 #define IRQ_TX_BIT BSP_BIT32(5)
@@ -128,8 +127,10 @@ static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term);
 
 const rtems_termios_device_handler pl011_handler = {
-    .first_open = first_open,
-    .write      = write_buffer,
+    .first_open     = first_open,
+    .write          = write_buffer,
+    .set_attributes = set_attributes,
+    .ioctl          = NULL,
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     .last_close = last_close,
     .poll_read  = NULL,
@@ -139,8 +140,6 @@ const rtems_termios_device_handler pl011_handler = {
     .poll_read  = read_char_polled,
     .mode       = TERMIOS_POLLED,
 #endif
-    .set_attributes = set_attributes,
-    .ioctl          = NULL,
 };
 
 static inline char read_char(uintptr_t regs_base) {
@@ -427,10 +426,8 @@ static bool set_attributes(rtems_termios_device_context *base,
     uint32_t cr = CR(regs_base);
 
     /* Wait for pending transactions, then flush the FIFOs */
-    // TODO:
-    while ((FR(regs_base) & FR_TXFE) == 0 || (FR(regs_base) & FR_BUSY) != 0)
+    while (!(FR(regs_base) & FR_TXFE) || (FR(regs_base) & FR_BUSY))
         ;
-
     lcrh &= ~LCRH_FEN;
 
     /* Set the baudrate */
