@@ -42,6 +42,14 @@
 #ifndef __tm27_h
 #define __tm27_h
 
+#include <bspopts.h>
+
+#if RTEMS_BSP == raspberrypi4b
+
+/* NOTE: Shouldn't this belong to the arm-gic-tm27.h file? */
+#include <dev/irq/arm-gic-irq.h>
 #include <dev/irq/arm-gic-tm27.h>
+
+#endif /* raspberrypi4b */
 
 #endif /* __tm27_h */
