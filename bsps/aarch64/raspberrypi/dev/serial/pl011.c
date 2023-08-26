@@ -42,56 +42,49 @@
 #include <rtems/termiosdevice.h>
 #include <rtems/termiostypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/_termios.h>
 
 #define REG(addr) *(volatile uint32_t *)(addr)
 
-#define DR(base)                   REG(base + 0x00)
-#define DR_DATA_MASK               BSP_MSK32(0, 7)
-#define FR(base)                   REG(base + 0x18)
-#define FR_BUSY                    BSP_BIT32(3)
-#define FR_RXFE                    BSP_BIT32(4)
-#define FR_TXFF                    BSP_BIT32(5)
-#define FR_TXFE                    BSP_BIT32(7)
-#define IBRD(base)                 REG(base + 0x24)
-#define IBRD_BAUD_DIVINT_WIDTH     16
-#define IBRD_BAUD_DIVINT_MASK      BSP_MSK32(0, IBRD_BAUD_DIVINT_WIDTH - 1)
-#define FBRD(base)                 REG(base + 0x28)
-#define FBRD_BAUD_DIVFRAC_WIDTH    6
-#define FBRD_BAUD_DIVFRAC_MASK     BSP_MSK32(0, FBRD_BAUD_DIVFRAC_WIDTH - 1)
-#define LCRH(base)                 REG(base + 0x2c)
-#define LCRH_PEN                   BSP_BIT32(1)
-#define LCRH_EPS                   BSP_BIT32(2)
-#define LCRH_STP2                  BSP_BIT32(3)
-#define LCRH_FEN                   BSP_BIT32(4)
-#define LCRH_WLEN_MASK             BSP_MSK32(5, 6)
-#define LCRH_WLEN_5BITS            BSP_FLD32(0, 5, 6)
-#define LCRH_WLEN_6BITS            BSP_FLD32(1, 5, 6)
-#define LCRH_WLEN_7BITS            BSP_FLD32(2, 5, 6)
-#define LCRH_WLEN_8BITS            BSP_FLD32(3, 5, 6)
-#define CR(base)                   REG(base + 0x30)
-#define CR_UARTEN                  BSP_BIT32(0)
-#define CR_TXE                     BSP_BIT32(8)
-#define CR_RXE                     BSP_BIT32(9)
-#define CR_RTSEN                   BSP_BIT32(14)
-#define CR_CTSEN                   BSP_BIT32(15)
-#define IFLS(base)                 REG(base + 0x34)
-#define IFLS_TXIFLSEL_MASK         BSP_MSK32(0, 2)
-#define IFLS_TXIFLSEL_ONE_EIGHTH   BSP_FLD32(0, 0, 2)
-#define IFLS_TXIFLSEL_ONE_FOURTH   BSP_FLD32(1, 0, 2)
-#define IFLS_TXIFLSEL_ONE_HALF     BSP_FLD32(2, 0, 2)
-#define IFLS_TXIFLSEL_THREE_FOURTH BSP_FLD32(3, 0, 2)
-#define IFLS_TXIFLSEL_SEVEN_EIGHTH BSP_FLD32(4, 0, 2)
-#define IFLS_RXIFLSEL_MASK         BSP_MSK32(3, 5)
-#define IFLS_RXIFLSEL_ONE_EIGHTH   BSP_FLD32(0, 3, 5)
-#define IFLS_RXIFLSEL_ONE_FOURTH   BSP_FLD32(1, 3, 5)
-#define IFLS_RXIFLSEL_ONE_HALF     BSP_FLD32(2, 3, 5)
-#define IFLS_RXIFLSEL_THREE_FOURTH BSP_FLD32(3, 3, 5)
-#define IFLS_RXIFLSEL_SEVEN_EIGHTH BSP_FLD32(4, 3, 5)
-#define IMSC(base)                 REG(base + 0x38)
-#define MIS(base)                  REG(base + 0x40)
-#define ICR(base)                  REG(base + 0x44)
+#define DR(base)                REG(base + 0x00)
+#define DR_DATA_MASK            BSP_MSK32(0, 7)
+#define FR(base)                REG(base + 0x18)
+#define FR_BUSY                 BSP_BIT32(3)
+#define FR_RXFE                 BSP_BIT32(4)
+#define FR_TXFF                 BSP_BIT32(5)
+#define FR_TXFE                 BSP_BIT32(7)
+#define IBRD(base)              REG(base + 0x24)
+#define IBRD_BAUD_DIVINT_WIDTH  16
+#define IBRD_BAUD_DIVINT_MASK   BSP_MSK32(0, IBRD_BAUD_DIVINT_WIDTH - 1)
+#define FBRD(base)              REG(base + 0x28)
+#define FBRD_BAUD_DIVFRAC_WIDTH 6
+#define FBRD_BAUD_DIVFRAC_MASK  BSP_MSK32(0, FBRD_BAUD_DIVFRAC_WIDTH - 1)
+#define LCRH(base)              REG(base + 0x2c)
+#define LCRH_PEN                BSP_BIT32(1)
+#define LCRH_EPS                BSP_BIT32(2)
+#define LCRH_STP2               BSP_BIT32(3)
+#define LCRH_FEN                BSP_BIT32(4)
+#define LCRH_WLEN_MASK          BSP_MSK32(5, 6)
+#define LCRH_WLEN_5BITS         BSP_FLD32(0, 5, 6)
+#define LCRH_WLEN_6BITS         BSP_FLD32(1, 5, 6)
+#define LCRH_WLEN_7BITS         BSP_FLD32(2, 5, 6)
+#define LCRH_WLEN_8BITS         BSP_FLD32(3, 5, 6)
+#define CR(base)                REG(base + 0x30)
+#define CR_UARTEN               BSP_BIT32(0)
+#define CR_TXE                  BSP_BIT32(8)
+#define CR_RXE                  BSP_BIT32(9)
+#define CR_RTSEN                BSP_BIT32(14)
+#define CR_CTSEN                BSP_BIT32(15)
+#define IFLS(base)              REG(base + 0x34)
+#define IFLS_TXIFLSEL_MASK      BSP_MSK32(0, 2)
+#define IFLS_TXIFLSEL(level)    BSP_FLD32(level, 0, 2)
+#define IFLS_RXIFLSEL_MASK      BSP_MSK32(3, 5)
+#define IFLS_RXIFLSEL(level)    BSP_FLD32(level, 3, 5)
+#define IMSC(base)              REG(base + 0x38)
+#define MIS(base)               REG(base + 0x40)
+#define ICR(base)               REG(base + 0x44)
 
 /* Applies to IMSC, ICR, and MIS */
 #define IRQ_RX_BIT BSP_BIT32(4)
@@ -103,7 +96,17 @@
 #define IRQ_OE_BIT BSP_BIT32(10)
 #define IRQ_MASK   BSP_MSK32(0, 10)
 
-#define FIFO_SIZE 32
+#define FIFO_SIZE                32
+#define TXFIFO_IRQ_TRIGGER_LEVEL FIFO_LEVEL_ONE_EIGHTH
+#define RXFIFO_IRQ_TRIGGER_LEVEL FIFO_LEVEL_ONE_HALF
+
+typedef enum {
+    FIFO_LEVEL_ONE_EIGHTH,
+    FIFO_LEVEL_ONE_FOURTH,
+    FIFO_LEVEL_ONE_HALF,
+    FIFO_LEVEL_THREE_FOURTH,
+    FIFO_LELEL_SEVEN_HALF,
+} fifo_trigger_level;
 
 static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
@@ -156,6 +159,21 @@ static inline bool is_txfifo_full(uintptr_t regs_base) {
     return (FR(regs_base) & FR_TXFF) != 0;
 }
 
+static inline void flush_fifos(pl011_context *ctx) {
+    uintptr_t regs_base = ctx->regs_base;
+
+    /* Wait for pending transactions */
+    while (FR(regs_base) & FR_BUSY)
+        ;
+
+    LCRH(regs_base) &= ~LCRH_FEN;
+    LCRH(regs_base) |= LCRH_FEN;
+
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
+    ctx->is_txfifo_primed = false;
+#endif
+}
+
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static inline void clear_irq(uintptr_t regs_base, uint32_t irq_mask) {
     ICR(regs_base) |= irq_mask;
@@ -172,36 +190,39 @@ static inline void disable_irq(uintptr_t regs_base, uint32_t irq_mask) {
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static void irq_handler(void *arg) {
-    rtems_termios_tty *tty = arg;
-    pl011_context *ctx     = rtems_termios_get_device_context(tty);
-    uintptr_t regs_base    = ctx->regs_base;
-
-    uint32_t irqs = MIS(regs_base);
+    pl011_context *ctx  = (void *)arg;
+    uintptr_t regs_base = ctx->regs_base;
+    uint32_t irqs       = MIS(regs_base);
 
     /* RXFIFO got data */
-    if ((irqs & (IRQ_RT_BIT | IRQ_RX_BIT)) != 0) {
+    const uint32_t rx_irq_mask = IRQ_RT_BIT | IRQ_RX_BIT;
+    if ((irqs & rx_irq_mask) != 0) {
         char buf[FIFO_SIZE];
 
         unsigned int i = 0;
         while (i < sizeof(buf) && !is_rxfifo_empty(regs_base))
             buf[i++] = read_char(regs_base);
 
-        (void)rtems_termios_enqueue_raw_characters(tty, buf, i);
+        (void)rtems_termios_enqueue_raw_characters(ctx->tty, buf, i);
+
+        /* Clear all interrupts */
+        clear_irq(regs_base, rx_irq_mask);
     }
 
     /*
-     * Transmission was queued last time and TXFIFO is now empty, so mark the
-     * transaction as done.
+     * Some characters got queued in the TXFIFO, so dequeue them from Termios'
+     * structures.
      */
-    if ((irqs & IRQ_TX_BIT) != 0) {
-        int sent             = ctx->tx_queued_chars;
-        ctx->tx_queued_chars = 0;
+    if (ctx->is_tx_queued) {
+        ctx->is_tx_queued = false;
+        if (!ctx->is_txfifo_primed && (irqs & IRQ_TX_BIT) != 0)
+            ctx->is_txfifo_primed = true;
 
-        (void)rtems_termios_dequeue_characters(tty, sent);
+        (void)rtems_termios_dequeue_characters(ctx->tty, ctx->tx_queued_chars);
+
+        /* No need to clear the interrupt. It will automatically get cleared
+         * when TXFIFO is filled above the trigger level. */
     }
-
-    /* Clear all raised interrupts */
-    clear_irq(regs_base, irqs);
 }
 #endif
 
@@ -212,7 +233,10 @@ static bool first_open(struct rtems_termios_tty *tty,
     pl011_context *ctx = (void *)base;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->tx_queued_chars = 0;
+    ctx->is_tx_queued     = false;
+    ctx->tx_queued_chars  = 0;
+    ctx->is_txfifo_primed = false;
+    ctx->tty              = tty;
 #endif
 
     if (rtems_termios_set_initial_baud(tty, ctx->initial_baud) != 0)
@@ -224,20 +248,15 @@ static bool first_open(struct rtems_termios_tty *tty,
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     uintptr_t regs_base = ctx->regs_base;
 
-    /* Trigger interrupts when FIFOs are half-filled. */
+    /* Set FIFO trigger levels for interrupts */
     uint32_t ifls = IFLS(regs_base);
     ifls &= ~(IFLS_RXIFLSEL_MASK | IFLS_TXIFLSEL_MASK);
-    ifls |= IFLS_RXIFLSEL_SEVEN_EIGHTH | IFLS_TXIFLSEL_ONE_EIGHTH;
+    ifls |= IFLS_TXIFLSEL(TXFIFO_IRQ_TRIGGER_LEVEL) |
+            IFLS_RXIFLSEL(RXFIFO_IRQ_TRIGGER_LEVEL);
     IFLS(regs_base) = ifls;
 
-    /* TODO: Is this preloading really required? Maybe re-thinking is required
-     * for the IRQ handling state-machine. */
-    /* Preload the TXFIFO with a placebo value to get the interrupts going */
-    for (int i = 0; i < FIFO_SIZE / 8 + 1; i++)
-        write_char(regs_base, '\r');
-
     rtems_status_code sc = rtems_interrupt_handler_install(
-        ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, tty);
+        ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, ctx);
     if (sc != RTEMS_SUCCESSFUL)
         return false;
 #endif
@@ -266,21 +285,33 @@ static int read_char_polled(rtems_termios_device_context *base) {
 
 static void write_buffer(rtems_termios_device_context *base, const char *buf,
                          size_t n) {
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
     pl011_context *ctx  = (void *)base;
     uintptr_t regs_base = ctx->regs_base;
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-    if (n > 0) {
-        const char *p    = buf;
-        size_t remaining = n;
-        while (!is_txfifo_full(regs_base) && remaining > 0) {
-            write_char(regs_base, *p);
 
-            p++;
-            remaining--;
+    if (n > 0) {
+        enable_irq(regs_base, IRQ_TX_BIT);
+
+        size_t i = 0;
+        while (!is_txfifo_full(regs_base) && i < n) {
+            write_char(regs_base, buf[i]);
+            i++;
         }
 
-        ctx->tx_queued_chars = n - remaining;
-        enable_irq(regs_base, IRQ_TX_BIT);
+        ctx->is_tx_queued    = true;
+        ctx->tx_queued_chars = i;
+
+        /*
+         * NOTE:
+         * The TX interrupt is triggered on level transition. The hardware does
+         * not raise an interrupt the first time after the TXFIFO is flushed.
+         * Therefore, we manually call the handler here until the trigger level
+         * is reached, and after that the interrupts are raised as usual
+         * whenever the TXFIFO is filled below the trigger level.
+         */
+        if (!ctx->is_txfifo_primed)
+            irq_handler(ctx);
+
         return;
     }
 
@@ -332,7 +363,7 @@ static int compute_baudrate_params(uint32_t *ibrd, uint32_t *fbrd,
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term) {
-    const pl011_context *ctx  = (void *)base;
+    pl011_context *ctx        = (void *)base;
     const uintptr_t regs_base = ctx->regs_base;
 
     /* Determine baudrate parameters */
@@ -375,46 +406,47 @@ static bool set_attributes(rtems_termios_device_context *base,
     if ((term->c_cflag & CSTOPB) != 0)
         lcrh |= LCRH_STP2;
 
-    /* Disable all interrupts */
-    disable_irq(regs_base, IRQ_MASK);
-
-    /* Disable UART */
+    /* Control: Disable UART */
     CR(regs_base) &= ~(CR_UARTEN | CR_RXE | CR_TXE);
     uint32_t cr = CR(regs_base);
 
-    /* Wait for pending transactions */
-    while (!(FR(regs_base) & FR_TXFE) || (FR(regs_base) & FR_BUSY))
-        ;
-
-    /* Disable both FIFOs */
-    lcrh &= ~LCRH_FEN;
-
-    /* Set the baudrate */
-    IBRD(regs_base) = ibrd;
-    FBRD(regs_base) = fbrd;
-    LCRH(regs_base) = lcrh;
-
     /*
+     * Control: Configure flow control
      * NOTE: Flow control is untested
      */
-    /* Configure flow control */
     cr &= ~(CR_CTSEN | CR_RTSEN);
     if ((term->c_cflag & CCTS_OFLOW) != 0)
         cr |= CR_CTSEN;
     if ((term->c_cflag & CRTS_IFLOW) != 0)
         cr |= CR_RTSEN;
 
-    /* Configure receiver */
+    /* Control: Configure receiver */
     const bool rx_enabled = (term->c_cflag & CREAD) != 0;
     if (rx_enabled)
         cr |= CR_RXE;
 
-    /* Re-enable UART */
+    /* Control: Re-enable UART */
     cr |= CR_UARTEN | CR_TXE;
-    CR(regs_base) = cr;
 
-    /* Re-enable both FIFOs */
-    LCRH(regs_base) |= LCRH_FEN;
+    /* Disable all interrupts */
+    disable_irq(regs_base, IRQ_MASK);
+
+    flush_fifos(ctx);
+
+    /* Set the baudrate */
+    IBRD(regs_base) = ibrd;
+    FBRD(regs_base) = fbrd;
+
+    /*
+     * Commit mode configurations
+     * NOTE:
+     * This has to happen after IBRD and FBRD as writing to LCRH is required to
+     * trigger the baudrate update.
+     */
+    LCRH(regs_base) = lcrh;
+
+    /* Commit changes to control register */
+    CR(regs_base) = cr;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
     /* Clear all interrupts  */

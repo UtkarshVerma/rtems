@@ -247,11 +247,8 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
      */
     disable_irq(regs_base, IER_REG_TXE);
 #else
-    const mini_uart_context *ctx = (void *)base;
-    const uintptr_t regs_base    = ctx->regs_base;
-
     for (size_t i = 0; i < n; i++)
-        write_char_polled(buf[i]);
+        mini_uart_write_char_polled(base, buf[i]);
 #endif
 }
 

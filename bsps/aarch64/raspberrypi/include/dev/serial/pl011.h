@@ -40,6 +40,8 @@
 #include <bspopts.h>
 #include <rtems/rtems/intr.h>
 #include <rtems/termiosdevice.h>
+#include <rtems/termiostypes.h>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
@@ -50,12 +52,15 @@ typedef struct {
     const rtems_vector_number irq;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
+    bool is_tx_queued;
     volatile size_t tx_queued_chars;
+    volatile bool is_txfifo_primed;
+    rtems_termios_tty* tty;
 #endif
 } pl011_context;
 
 extern const rtems_termios_device_handler pl011_handler;
 
-void pl011_write_char_polled(rtems_termios_device_context* ctx, char ch);
+void pl011_write_char_polled(rtems_termios_device_context* base, char ch);
 
 #endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_PL011_H */
