@@ -1,0 +1,35 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: objects
+cflags: []
+cppflags: []
+cxxflags: []
+includes: []
+
+install:
+  - destination: ${BSP_INCLUDEDIR}/bsp
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/i2c.h
+  - destination: ${BSP_INCLUDEDIR}/bsp/i2c
+    source:
+      - bsps/aarch64/raspberrypi/include/bsp/i2c/buses.h
+
+source:
+  - bsps/aarch64/raspberrypi/i2c/i2c.c
+  - bsps/aarch64/raspberrypi/i2c/buses.c
+  - bsps/aarch64/raspberrypi/i2c/buses/raspberrypi4b.c
+
+links:
+  - role: build-dependency
+    uid: obji2cbsc
+  - role: build-dependency
+    uid: opti2cport
+  - role: build-dependency
+    uid: opti2cirq
+  - role: build-dependency
+    uid: opti2cclockspeed

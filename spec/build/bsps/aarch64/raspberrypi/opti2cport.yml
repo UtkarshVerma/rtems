@@ -1,0 +1,23 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: option
+name: BSP_I2C_PORT
+description: Default I2C port for the console device.
+
+actions:
+  - get-string: null
+  - define-unquoted: null
+
+default:
+  - enabled-by:
+      - aarch64/raspberrypi4b
+    value: I2C1
+
+format: '{}'
+
+links: []

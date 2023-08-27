@@ -1,0 +1,23 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+copyrights:
+  - Copyright (C) 2023 Utkarsh Verma
+
+type: build
+enabled-by: true
+
+build-type: option
+name: BSP_I2C_CLOCK_SPEED
+description: Default clock speed for the I2C bus.
+
+actions:
+  - get-integer: null
+  - define: null
+
+default:
+  - enabled-by:
+      - aarch64/raspberrypi4b
+    value: 100000
+
+format: '{}'
+
+links: []

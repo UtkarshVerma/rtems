@@ -66,6 +66,13 @@ BSP_START_DATA_SECTION static const aarch64_mmu_config_entry
         },
 
         {
+            /* I2C1 */
+            .begin = BCM2711_I2C1_BASE,
+            .end   = BCM2711_I2C1_BASE + BCM2711_I2C_DEVICE_SIZE,
+            .flags = AARCH64_MMU_DEVICE,
+        },
+
+        {
             /* Auxiliaries */
             .begin = BSP_AUX_BASE,
             .end   = BSP_AUX_BASE + BSP_AUX_SIZE,
