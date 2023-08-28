@@ -37,7 +37,9 @@
 #ifndef LIBBSP_AARCH64_RASPBERRYPI_BSP_I2C_BUSES_H
 #define LIBBSP_AARCH64_RASPBERRYPI_BSP_I2C_BUSES_H
 
+#include <bspopts.h>
 #include <dev/i2c/i2c.h>
+#include <rtems/rtems/status.h>
 
 #include "bsp/rpi-gpio.h"
 

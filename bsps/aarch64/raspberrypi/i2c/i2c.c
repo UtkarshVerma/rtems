@@ -52,8 +52,17 @@ static const bsp_i2c_bus *config = &raspberrypi4b_i2c_buses[BSP_I2C_PORT];
 rtems_device_driver i2c_initialize(rtems_device_major_number major,
                                    rtems_device_minor_number minor,
                                    void *arg) {
-    bsc_init(config->bus);
-    i2c_bus_register(config->bus, config->file);
+    int status = bsc_init(config->bus);
+    if (status != 0)
+        return status;
+
+    status = i2c_bus_register(config->bus, config->file);
+    if (status != 0)
+        return status;
+
+    status = bsp_i2c_bus_init_gpio(&config->gpio);
+    if (status != 0)
+        return status;
 
     return RTEMS_SUCCESSFUL;
 }

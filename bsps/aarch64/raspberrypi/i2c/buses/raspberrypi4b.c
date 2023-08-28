@@ -9,7 +9,7 @@
  */
 
 /*
- * Copyright (c) 2023 Utkarsh Verma
+ * Copyright (C) 2023 Utkarsh Verma
  *
  *
  * Redistribution and use in source and binary forms, with or without
