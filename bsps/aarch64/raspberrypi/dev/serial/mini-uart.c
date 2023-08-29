@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: BSD-2-Clause */
 
-/**
- * @file
- *
- * @ingroup RTEMSBSPsAArch64RaspberryPi
- *
- * @brief Mini UART Device Driver
- */
-
 /*
  * Copyright (C) 2023 Utkarsh Verma
  *
@@ -42,6 +34,7 @@
 #include <rtems/termiosdevice.h>
 #include <rtems/termiostypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/_termios.h>
 
@@ -90,11 +83,11 @@ static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args);
 #else
-static int read_char_polled(rtems_termios_device_context *ctx);
+static int read_char_polled(rtems_termios_device_context *base);
 #endif
 
-static void write_buffer(rtems_termios_device_context *base, const char *buf,
-                         size_t n);
+static void write_buffer(rtems_termios_device_context *base,
+                         const char *buffer, size_t n);
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term);
@@ -115,61 +108,58 @@ const rtems_termios_device_handler mini_uart_handler = {
 #endif
 };
 
-static inline char read_char(uintptr_t regs_base) {
+static inline char read_char(const uintptr_t regs_base) {
     return IO_REG(regs_base) & IO_REG_DATA_MASK;
 }
 
-static inline void write_char(uintptr_t regs_base, char ch) {
+static inline void write_char(const uintptr_t regs_base, const char ch) {
     IO_REG(regs_base) = ch;
 }
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-static inline void enable_irq(uintptr_t regs_base, uint32_t irq_mask) {
+static inline void enable_irq(const uintptr_t regs_base,
+                              const uint32_t irq_mask) {
     IER_REG(regs_base) |= irq_mask;
 }
 #endif
 
-static inline void disable_irq(uintptr_t regs_base, uint32_t irq_mask) {
+static inline void disable_irq(const uintptr_t regs_base,
+                               const uint32_t irq_mask) {
     IER_REG(regs_base) &= ~irq_mask;
 }
 
-static inline bool is_rxfifo_empty(uintptr_t regs_base) {
+static inline bool is_rxfifo_empty(const uintptr_t regs_base) {
     return (STAT_REG(regs_base) & STAT_REG_RXFIFO_NOT_EMPTY) != 0;
 }
 
-static inline bool txfifo_has_space(uintptr_t regs_base) {
+static inline bool txfifo_has_space(const uintptr_t regs_base) {
     return (STAT_REG(regs_base) & STAT_REG_TXFIFO_HAS_SPACE) != 0;
 }
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static void irq_handler(void *arg) {
-    rtems_termios_tty *tty = arg;
-    mini_uart_context *ctx = rtems_termios_get_device_context(tty);
-    uintptr_t regs_base    = ctx->regs_base;
-
-    uint32_t irqs = IIR_REG(regs_base);
+    rtems_termios_tty *tty     = arg;
+    mini_uart_context *context = rtems_termios_get_device_context(tty);
+    const uintptr_t regs_base  = context->regs_base;
+    const uint32_t irqs        = IIR_REG(regs_base);
 
     /* RXFIFO got data */
     if ((irqs & IIR_REG_RXFIFO_GOT_DATA) != 0) {
-        char buf[FIFO_SIZE];
+        char buffer[FIFO_SIZE];
 
         unsigned int i = 0;
-        while (i < sizeof(buf) && !is_rxfifo_empty(regs_base))
-            buf[i++] = read_char(regs_base);
+        while (i < sizeof(buffer) && !is_rxfifo_empty(regs_base))
+            buffer[i++] = read_char(regs_base);
 
-        (void)rtems_termios_enqueue_raw_characters(tty, buf, i);
+        (void)rtems_termios_enqueue_raw_characters(tty, buffer, i);
     }
 
     /*
-     * Transmission was queued last time and TXFIFO is now empty, so mark the
-     * transaction as done.
+     * Transmission was queued last time and TXFIFO is now empty, so tell
+     * Termios to dequeue the sent bytes.
      */
-    if ((irqs & IIR_REG_TXFIFO_EMPTY) != 0) {
-        int sent             = ctx->tx_queued_chars;
-        ctx->tx_queued_chars = 0;
-
-        (void)rtems_termios_dequeue_characters(tty, sent);
-    }
+    if ((irqs & IIR_REG_TXFIFO_EMPTY) != 0)
+        (void)rtems_termios_dequeue_characters(tty, context->tx_queued_chars);
 }
 #endif
 
@@ -177,21 +167,20 @@ static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        struct termios *term,
                        rtems_libio_open_close_args_t *args) {
-    mini_uart_context *ctx = (void *)base;
-
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->tx_queued_chars = 0;
+#ifndef BSP_CONSOLE_USE_INTERRUPTS
+    const
 #endif
+        mini_uart_context *context = (void *)base;
 
-    if (rtems_termios_set_initial_baud(tty, ctx->initial_baud) != 0)
+    if (rtems_termios_set_initial_baud(tty, context->initial_baud) != 0)
         return false;
 
     if (!set_attributes(base, term))
         return false;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    rtems_status_code status = rtems_interrupt_handler_install(
-        ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, tty);
+    const rtems_status_code status = rtems_interrupt_handler_install(
+        context->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, tty);
     if (status != RTEMS_SUCCESSFUL)
         return false;
 #endif
@@ -203,13 +192,13 @@ static bool first_open(struct rtems_termios_tty *tty,
 static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args) {
-    const mini_uart_context *ctx = (void *)base;
-    (void)rtems_interrupt_handler_remove(ctx->irq, irq_handler, tty);
+    const mini_uart_context *context = (void *)base;
+    (void)rtems_interrupt_handler_remove(context->irq, irq_handler, tty);
 }
 #else
 static int read_char_polled(rtems_termios_device_context *base) {
-    const mini_uart_context *ctx = (void *)base;
-    const uintptr_t regs_base    = ctx->regs_base;
+    const mini_uart_context *context = (void *)base;
+    const uintptr_t regs_base        = context->regs_base;
 
     /* Data is available to be read */
     if (!is_rxfifo_empty(regs_base))
@@ -220,23 +209,22 @@ static int read_char_polled(rtems_termios_device_context *base) {
 }
 #endif
 
-static void write_buffer(rtems_termios_device_context *base, const char *buf,
-                         size_t n) {
+static void write_buffer(rtems_termios_device_context *base,
+                         const char *buffer, size_t n) {
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    mini_uart_context *ctx = (void *)base;
-    uintptr_t regs_base    = ctx->regs_base;
+    mini_uart_context *context = (void *)base;
+    const uintptr_t regs_base  = context->regs_base;
 
     if (n > 0) {
-        const char *p    = buf;
-        size_t remaining = n;
-        while (txfifo_has_space(regs_base) && remaining > 0) {
-            write_char(regs_base, *p);
-            p++;
-            remaining--;
+        size_t i = 0;
+        while (txfifo_has_space(regs_base) && i < n) {
+            write_char(regs_base, buffer[i]);
+            i++;
         }
 
-        ctx->tx_queued_chars = n - remaining;
+        context->tx_queued_chars = i;
         enable_irq(regs_base, IER_REG_TXE);
+
         return;
     }
 
@@ -248,14 +236,14 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
     disable_irq(regs_base, IER_REG_TXE);
 #else
     for (size_t i = 0; i < n; i++)
-        mini_uart_write_char_polled(base, buf[i]);
+        mini_uart_write_char_polled(base, buffer[i]);
 #endif
 }
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term) {
-    mini_uart_context *ctx    = (void *)base;
-    const uintptr_t regs_base = ctx->regs_base;
+    const mini_uart_context *ctx = (void *)base;
+    const uintptr_t regs_base    = ctx->regs_base;
 
     /* Disable interrupts */
     disable_irq(regs_base, IER_REG_IRQ_MASK);
@@ -264,8 +252,11 @@ static bool set_attributes(rtems_termios_device_context *base,
     CNTL_REG(regs_base) &= ~(CNTL_REG_RXE | CNTL_REG_TXE);
     uint32_t cntl = CNTL_REG(regs_base);
 
-    /* Flush both FIFOs */
-    IIR_REG(regs_base) = (IIR_REG_CLEAR_RXFIFO | IIR_REG_CLEAR_TXFIFO);
+    /*
+     * Flush both FIFOs
+     * NOTE: Only the FIFO bits support writing so direct assignment is safe.
+     */
+    IIR_REG(regs_base) = IIR_REG_CLEAR_RXFIFO | IIR_REG_CLEAR_TXFIFO;
 
     /*
      * Set the character size
@@ -313,9 +304,11 @@ static bool set_attributes(rtems_termios_device_context *base,
     return true;
 }
 
-void mini_uart_write_char_polled(rtems_termios_device_context *base, char ch) {
-    mini_uart_context *ctx = (void *)base;
-    uintptr_t regs_base    = ctx->regs_base;
+void mini_uart_write_char_polled(const rtems_termios_device_context *base,
+                                 const char ch) {
+    const mini_uart_context *context = (void *)base;
+    const uintptr_t regs_base        = context->regs_base;
+
     while (!txfifo_has_space(regs_base))
         ;
 

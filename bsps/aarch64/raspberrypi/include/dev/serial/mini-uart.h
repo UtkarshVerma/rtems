@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: BSD-2-Clause */
 
-/**
- * @file
- *
- * @ingroup RTEMSBSPsAArch64RaspberryPi
- *
- * @brief Mini UART Device Driver
- */
-
 /*
  * Copyright (C) 2023 Utkarsh Verma
  *
@@ -34,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
-#define LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H
+#ifndef LIBBSP_SHARED_DEV_SERIAL_MINI_UART_H
+#define LIBBSP_SHARED_DEV_SERIAL_MINI_UART_H
 
 #include <bspopts.h>
 #include <rtems/rtems/intr.h>
@@ -44,18 +36,19 @@
 
 typedef struct {
     rtems_termios_device_context context;
-    uintptr_t regs_base;
-    uint32_t clock;
+    const uintptr_t regs_base;
+    const uint32_t clock;
     const uint32_t initial_baud;
     const rtems_vector_number irq;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    volatile size_t tx_queued_chars;
+    volatile int tx_queued_chars;
 #endif
 } mini_uart_context;
 
 extern const rtems_termios_device_handler mini_uart_handler;
 
-void mini_uart_write_char_polled(rtems_termios_device_context* ctx, char ch);
+void mini_uart_write_char_polled(const rtems_termios_device_context* context,
+                                 const char ch);
 
-#endif /* LIBBSP_AARCH64_RASPBERRYPI_DEV_SERIAL_MINI_UART_H */
+#endif /* LIBBSP_SHARED_DEV_SERIAL_MINI_UART_H */
