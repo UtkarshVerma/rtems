@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: BSD-2-Clause */
 
-/**
- * @file
- *
- * @ingroup RTEMSBSPsAArch64RaspberryPi
- *
- * @brief PL011 UART Device Driver
- */
-
 /*
  * Copyright (C) 2023 Utkarsh Verma
  *
@@ -96,17 +88,19 @@
 #define IRQ_OE_BIT BSP_BIT32(10)
 #define IRQ_MASK   BSP_MSK32(0, 10)
 
+#ifdef BSP_CONSOLE_USE_INTERRUPTS
 #define FIFO_SIZE                32
 #define TXFIFO_IRQ_TRIGGER_LEVEL FIFO_LEVEL_ONE_EIGHTH
 #define RXFIFO_IRQ_TRIGGER_LEVEL FIFO_LEVEL_ONE_HALF
 
-typedef enum {
+enum fifo_trigger_level {
     FIFO_LEVEL_ONE_EIGHTH,
     FIFO_LEVEL_ONE_FOURTH,
     FIFO_LEVEL_ONE_HALF,
     FIFO_LEVEL_THREE_FOURTH,
     FIFO_LELEL_SEVEN_HALF,
-} fifo_trigger_level;
+};
+#endif
 
 static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
@@ -118,11 +112,11 @@ static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args);
 #else
-static int read_char_polled(rtems_termios_device_context *ctx);
+static int read_char_polled(rtems_termios_device_context *base);
 #endif
 
-static void write_buffer(rtems_termios_device_context *base, const char *buf,
-                         size_t n);
+static void write_buffer(rtems_termios_device_context *base,
+                         const char *buffer, size_t n);
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term);
@@ -143,43 +137,42 @@ const rtems_termios_device_handler pl011_handler = {
 #endif
 };
 
-static inline char read_char(uintptr_t regs_base) {
+static inline char read_char(const uintptr_t regs_base) {
     return DR(regs_base) & DR_DATA_MASK;
 }
 
-static inline void write_char(uintptr_t regs_base, char ch) {
+static inline void write_char(const uintptr_t regs_base, const char ch) {
     DR(regs_base) = ch;
 }
 
-static inline bool is_rxfifo_empty(uintptr_t regs_base) {
+static inline bool is_rxfifo_empty(const uintptr_t regs_base) {
     return (FR(regs_base) & FR_RXFE) != 0;
 }
 
-static inline bool is_txfifo_full(uintptr_t regs_base) {
+static inline bool is_txfifo_full(const uintptr_t regs_base) {
     return (FR(regs_base) & FR_TXFF) != 0;
 }
 
-static inline void flush_fifos(pl011_context *ctx) {
-    uintptr_t regs_base = ctx->regs_base;
+static void flush_fifos(const pl011_context *context) {
+    const uintptr_t regs_base = context->regs_base;
 
     /* Wait for pending transactions */
-    while (FR(regs_base) & FR_BUSY)
+    while ((FR(regs_base) & FR_BUSY) != 0)
         ;
 
     LCRH(regs_base) &= ~LCRH_FEN;
     LCRH(regs_base) |= LCRH_FEN;
-
-#ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->is_txfifo_primed = false;
-#endif
 }
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-static inline void clear_irq(uintptr_t regs_base, uint32_t irq_mask) {
-    ICR(regs_base) |= irq_mask;
+static inline void clear_irq(const uintptr_t regs_base,
+                             const uint32_t irq_mask) {
+    /* ICR is a write-only register */
+    ICR(regs_base) = irq_mask;
 }
 
-static void enable_irq(uintptr_t regs_base, uint32_t irq_mask) {
+static inline void enable_irq(const uintptr_t regs_base,
+                              const uint32_t irq_mask) {
     IMSC(regs_base) |= irq_mask;
 }
 #endif
@@ -190,20 +183,22 @@ static inline void disable_irq(uintptr_t regs_base, uint32_t irq_mask) {
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
 static void irq_handler(void *arg) {
-    pl011_context *ctx  = (void *)arg;
-    uintptr_t regs_base = ctx->regs_base;
-    uint32_t irqs       = MIS(regs_base);
+    pl011_context *context    = (void *)arg;
+    const uintptr_t regs_base = context->regs_base;
+    const uint32_t irqs       = MIS(regs_base);
 
     /* RXFIFO got data */
     const uint32_t rx_irq_mask = IRQ_RT_BIT | IRQ_RX_BIT;
     if ((irqs & rx_irq_mask) != 0) {
-        char buf[FIFO_SIZE];
+        char buffer[FIFO_SIZE];
 
         unsigned int i = 0;
-        while (i < sizeof(buf) && !is_rxfifo_empty(regs_base))
-            buf[i++] = read_char(regs_base);
+        while (i < sizeof(buffer) && !is_rxfifo_empty(regs_base)) {
+            buffer[i] = read_char(regs_base);
+            i++;
+        }
 
-        (void)rtems_termios_enqueue_raw_characters(ctx->tty, buf, i);
+        (void)rtems_termios_enqueue_raw_characters(context->tty, buffer, i);
 
         /* Clear all interrupts */
         clear_irq(regs_base, rx_irq_mask);
@@ -213,12 +208,16 @@ static void irq_handler(void *arg) {
      * Some characters got queued in the TXFIFO, so dequeue them from Termios'
      * structures.
      */
-    if (ctx->is_tx_queued) {
-        ctx->is_tx_queued = false;
-        if (!ctx->is_txfifo_primed && (irqs & IRQ_TX_BIT) != 0)
-            ctx->is_txfifo_primed = true;
+    if (context->tx_queued_chars != -1) {
+        /*
+         * First interrupt was raised, so no need to trigger the handler
+         * through software anymore.
+         */
+        if (context->needs_sw_triggered_tx_irq && (irqs & IRQ_TX_BIT) != 0)
+            context->needs_sw_triggered_tx_irq = false;
 
-        (void)rtems_termios_dequeue_characters(ctx->tty, ctx->tx_queued_chars);
+        (void)rtems_termios_dequeue_characters(context->tty,
+                                               context->tx_queued_chars);
 
         /* No need to clear the interrupt. It will automatically get cleared
          * when TXFIFO is filled above the trigger level. */
@@ -230,23 +229,23 @@ static bool first_open(struct rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        struct termios *term,
                        rtems_libio_open_close_args_t *args) {
-    pl011_context *ctx = (void *)base;
+#ifndef BSP_CONSOLE_USE_INTERRUPTS
+    const
+#endif
+        pl011_context *context = (void *)base;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    ctx->is_tx_queued     = false;
-    ctx->tx_queued_chars  = 0;
-    ctx->is_txfifo_primed = false;
-    ctx->tty              = tty;
+    context->tty = tty;
 #endif
 
-    if (rtems_termios_set_initial_baud(tty, ctx->initial_baud) != 0)
+    if (rtems_termios_set_initial_baud(tty, context->initial_baud) != 0)
         return false;
 
     if (!set_attributes(base, term))
         return false;
 
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    uintptr_t regs_base = ctx->regs_base;
+    const uintptr_t regs_base = context->regs_base;
 
     /* Set FIFO trigger levels for interrupts */
     uint32_t ifls = IFLS(regs_base);
@@ -255,8 +254,8 @@ static bool first_open(struct rtems_termios_tty *tty,
             IFLS_RXIFLSEL(RXFIFO_IRQ_TRIGGER_LEVEL);
     IFLS(regs_base) = ifls;
 
-    rtems_status_code sc = rtems_interrupt_handler_install(
-        ctx->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, ctx);
+    const rtems_status_code sc = rtems_interrupt_handler_install(
+        context->irq, "UART", RTEMS_INTERRUPT_SHARED, irq_handler, context);
     if (sc != RTEMS_SUCCESSFUL)
         return false;
 #endif
@@ -268,13 +267,13 @@ static bool first_open(struct rtems_termios_tty *tty,
 static void last_close(rtems_termios_tty *tty,
                        rtems_termios_device_context *base,
                        rtems_libio_open_close_args_t *args) {
-    const pl011_context *ctx = (void *)base;
-    rtems_interrupt_handler_remove(ctx->irq, irq_handler, tty);
+    const pl011_context *context = (void *)base;
+    (void)rtems_interrupt_handler_remove(context->irq, irq_handler, tty);
 }
 #else
 static int read_char_polled(rtems_termios_device_context *base) {
-    const pl011_context *ctx  = (void *)base;
-    const uintptr_t regs_base = ctx->regs_base;
+    const pl011_context *context = (void *)base;
+    const uintptr_t regs_base    = context->regs_base;
 
     if (is_rxfifo_empty(regs_base))
         return -1;
@@ -283,34 +282,24 @@ static int read_char_polled(rtems_termios_device_context *base) {
 }
 #endif
 
-static void write_buffer(rtems_termios_device_context *base, const char *buf,
-                         size_t n) {
+static void write_buffer(rtems_termios_device_context *base,
+                         const char *buffer, size_t n) {
 #ifdef BSP_CONSOLE_USE_INTERRUPTS
-    pl011_context *ctx  = (void *)base;
-    uintptr_t regs_base = ctx->regs_base;
+    pl011_context *context    = (void *)base;
+    const uintptr_t regs_base = context->regs_base;
 
     if (n > 0) {
-        enable_irq(regs_base, IRQ_TX_BIT);
-
         size_t i = 0;
         while (!is_txfifo_full(regs_base) && i < n) {
-            write_char(regs_base, buf[i]);
+            write_char(regs_base, buffer[i]);
             i++;
         }
 
-        ctx->is_tx_queued    = true;
-        ctx->tx_queued_chars = i;
+        context->tx_queued_chars = i;
+        enable_irq(regs_base, IRQ_TX_BIT);
 
-        /*
-         * NOTE:
-         * The TX interrupt is triggered on level transition. The hardware does
-         * not raise an interrupt the first time after the TXFIFO is flushed.
-         * Therefore, we manually call the handler here until the trigger level
-         * is reached, and after that the interrupts are raised as usual
-         * whenever the TXFIFO is filled below the trigger level.
-         */
-        if (!ctx->is_txfifo_primed)
-            irq_handler(ctx);
+        if (context->needs_sw_triggered_tx_irq)
+            irq_handler(context);
 
         return;
     }
@@ -323,13 +312,14 @@ static void write_buffer(rtems_termios_device_context *base, const char *buf,
     disable_irq(regs_base, IRQ_TX_BIT);
 #else
     for (size_t i = 0; i < n; i++)
-        pl011_write_char_polled(base, buf[i]);
+        pl011_write_char_polled(base, buffer[i]);
 #endif
 }
 
 static int compute_baudrate_params(uint32_t *ibrd, uint32_t *fbrd,
-                                   uint32_t baudrate, uint32_t clock,
-                                   unsigned short max_error) {
+                                   const uint32_t baudrate,
+                                   const uint32_t clock,
+                                   const unsigned short max_error) {
     /*
      * The integer baudrate divisor, i.e. (clock / (baudrate * 16)), value
      * should lie on [1, 2^16 - 1]. To ensure this, clock and baudrate have to
@@ -340,21 +330,22 @@ static int compute_baudrate_params(uint32_t *ibrd, uint32_t *fbrd,
         return 2;
 
     /* Find the fractional part */
-    const uint16_t scalar    = 1 << (FBRD_BAUD_DIVFRAC_WIDTH + 1);
-    uint64_t scaled_bauddiv  = ((uint64_t)clock * scalar) / 16 / baudrate;
-    unsigned short round_off = scaled_bauddiv & 0x1;
+    const uint16_t scalar         = 1 << (FBRD_BAUD_DIVFRAC_WIDTH + 1);
+    const uint64_t scaled_bauddiv = ((uint64_t)clock * scalar) / 16 / baudrate;
+    const unsigned short round_off = scaled_bauddiv & 0x1;
     *fbrd = ((scaled_bauddiv >> 1) & FBRD_BAUD_DIVFRAC_MASK) + round_off;
 
     /* Calculate the baudrate and check if the error is too large */
-    uint32_t computed_bauddiv = (*ibrd << FBRD_BAUD_DIVFRAC_WIDTH) | *fbrd;
-    uint32_t computed_baudrate =
+    const uint32_t computed_bauddiv =
+        (*ibrd << FBRD_BAUD_DIVFRAC_WIDTH) | *fbrd;
+    const uint32_t computed_baudrate =
         ((uint64_t)clock << FBRD_BAUD_DIVFRAC_WIDTH) / 16 / computed_bauddiv;
 
     uint32_t baud_error = computed_baudrate - baudrate;
     if (baudrate > computed_baudrate)
         baud_error = baudrate - computed_baudrate;
 
-    unsigned short percent_error = (baud_error * 100) / baudrate;
+    const unsigned short percent_error = (baud_error * 100) / baudrate;
     if (percent_error >= max_error)
         return 1;
 
@@ -363,16 +354,16 @@ static int compute_baudrate_params(uint32_t *ibrd, uint32_t *fbrd,
 
 static bool set_attributes(rtems_termios_device_context *base,
                            const struct termios *term) {
-    pl011_context *ctx        = (void *)base;
-    const uintptr_t regs_base = ctx->regs_base;
+    pl011_context *context    = (void *)base;
+    const uintptr_t regs_base = context->regs_base;
 
     /* Determine baudrate parameters */
-    uint32_t baud = rtems_termios_number_to_baud(term->c_ospeed);
+    const uint32_t baud = rtems_termios_number_to_baud(term->c_ospeed);
     if (baud == B0)
         return false;
 
     uint32_t ibrd, fbrd;
-    if (compute_baudrate_params(&ibrd, &fbrd, baud, ctx->clock, 3))
+    if (compute_baudrate_params(&ibrd, &fbrd, baud, context->clock, 3))
         return false;
 
     /* Start mode configuration from a clean slate */
@@ -431,7 +422,7 @@ static bool set_attributes(rtems_termios_device_context *base,
     /* Disable all interrupts */
     disable_irq(regs_base, IRQ_MASK);
 
-    flush_fifos(ctx);
+    flush_fifos(context);
 
     /* Set the baudrate */
     IBRD(regs_base) = ibrd;
@@ -440,8 +431,8 @@ static bool set_attributes(rtems_termios_device_context *base,
     /*
      * Commit mode configurations
      * NOTE:
-     * This has to happen after IBRD and FBRD as writing to LCRH is required to
-     * trigger the baudrate update.
+     * This has to happen after IBRD and FBRD as writing to LCRH is
+     * required to trigger the baudrate update.
      */
     LCRH(regs_base) = lcrh;
 
@@ -455,14 +446,21 @@ static bool set_attributes(rtems_termios_device_context *base,
     /* Re-enable RX interrupts */
     if (rx_enabled)
         enable_irq(regs_base, IRQ_RT_BIT | IRQ_RX_BIT);
+
+    /*
+     * UART is freshly enabled, TXFIFO is empty, and interrupt will be enabled,
+     * so the next transmission will required software-trigger interrupt.
+     */
+    context->needs_sw_triggered_tx_irq = true;
 #endif
 
     return true;
 }
 
-void pl011_write_char_polled(rtems_termios_device_context *base, char ch) {
-    const pl011_context *ctx = (void *)base;
-    uintptr_t regs_base      = ctx->regs_base;
+void pl011_write_char_polled(const rtems_termios_device_context *base,
+                             const char ch) {
+    const pl011_context *context = (void *)base;
+    const uintptr_t regs_base    = context->regs_base;
 
     /* Wait until TXFIFO has space */
     while (is_txfifo_full(regs_base))
