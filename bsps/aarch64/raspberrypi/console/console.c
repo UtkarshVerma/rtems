@@ -47,6 +47,8 @@
 #include <rtems/termiosdevice.h>
 #include <stdint.h>
 
+#include "bsp/rpi-gpio.h"
+
 #define CONSOLE_DEVICE_CONTEXT_NAME(port_no) uart##port_no##_context
 
 #define CONSOLE_DEVICE_CONTEXT(port_no, _file_name, base, _size, clock_freq,    \
@@ -60,17 +62,26 @@
     };
 
 #define CONSOLE_DEVICE(port_no, file_name, _base, _size, _clock, _irq,      \
-                       _context_type, dev_handler, write_char_func)         \
+                       _context_type, dev_handler, write_char_func, rx_pin, \
+                       tx_pin, gpio_func, ...)                              \
     [CONSOLE_DEVICE_PORT2ENUM(port_no)] = {                                 \
-        .file              = file_name,                                     \
-        .context           = &CONSOLE_DEVICE_CONTEXT_NAME(port_no).context, \
-        .handler           = dev_handler,                                   \
+        .file    = file_name,                                               \
+        .context = &CONSOLE_DEVICE_CONTEXT_NAME(port_no).context,           \
+        .gpio    = {.rx = rx_pin, .tx = tx_pin, .function = gpio_func},     \
+        .handler = dev_handler,                                             \
         .write_char_polled = write_char_func,                               \
     },
 
 typedef struct {
+    const unsigned int rx;
+    const unsigned int tx;
+    const gpio_function function;
+} bsp_console_device_gpio_config;
+
+typedef struct {
     const char* file;
     rtems_termios_device_context* context;
+    const bsp_console_device_gpio_config gpio;
 
     const rtems_termios_device_handler* handler;
     void (*write_char_polled)(const rtems_termios_device_context*, const char);
@@ -85,6 +96,27 @@ static const bsp_console_device devices[CONSOLE_DEVICE_COUNT] = {
     CONSOLE_DEVICES(CONSOLE_DEVICE)
     /* clang-format on */
 };
+
+static rtems_status_code console_device_init_gpio(
+    const bsp_console_device_gpio_config* gpio) {
+    rtems_status_code status = gpio_set_function(gpio->rx, gpio->function);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
+
+    status = gpio_set_function(gpio->tx, gpio->function);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
+
+    status = gpio_set_pull(gpio->rx, GPIO_PULL_NONE);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
+
+    status = gpio_set_pull(gpio->tx, GPIO_PULL_NONE);
+    if (status != RTEMS_SUCCESSFUL)
+        return status;
+
+    return RTEMS_SUCCESSFUL;
+}
 
 static void output_char(const char ch) {
     const bsp_console_device* device = &devices[BSP_CONSOLE_PORT];
@@ -101,12 +133,16 @@ static int poll_char(void) {
 rtems_device_driver console_initialize(rtems_device_major_number major,
                                        rtems_device_minor_number minor,
                                        void* arg) {
-    rtems_termios_initialize();
-
     const bsp_console_device* device = &devices[BSP_CONSOLE_PORT];
 
-    rtems_status_code status = rtems_termios_device_install(
-        device->file, device->handler, NULL, device->context);
+    rtems_termios_initialize();
+
+    rtems_status_code status = console_device_init_gpio(&device->gpio);
+    if (status != RTEMS_SUCCESSFUL)
+        bsp_fatal(BSP_FATAL_CONSOLE_REGISTER_DEV_0);
+
+    status = rtems_termios_device_install(device->file, device->handler, NULL,
+                                          device->context);
     if (status != RTEMS_SUCCESSFUL)
         bsp_fatal(BSP_FATAL_CONSOLE_INSTALL_0);
 

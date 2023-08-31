@@ -41,6 +41,7 @@
 #include <dev/serial/pl011.h>
 
 #include "bsp/bcm2711.h"
+#include "bsp/rpi-gpio.h"
 
 #define RASPBERRYPI4B_CONSOLE_DEVICES(X)                           \
     X(0, "/dev/ttyAMA0", BCM2711_UART0_BASE, BCM2711_UART0_SIZE,   \
